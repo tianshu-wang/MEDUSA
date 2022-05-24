@@ -82,9 +82,17 @@ void output_timers() {
     Timer * timer = get_timer(tidx);
     timer_get_total(timer, &times[tidx]);
   }
+#if(USE_MPI==TRUE)
   MPI_Reduce(&times[0], &tmax[0], ntimers, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
   MPI_Reduce(&times[0], &tmin[0], ntimers, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
   MPI_Reduce(&times[0], &tavg[0], ntimers, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+#else
+  for(int itemp=0;itemp<ntimers;itemp++){
+    tmax[itemp] = times[0];
+    tmin[itemp] = times[0];
+    tavg[itemp] = times[0];
+  }
+#endif
 
   if (mpi_io_proc()) {
     for (int tidx = 0; tidx < ntimers; ++tidx) {
@@ -396,9 +404,7 @@ void dump_grid()
     if (istop[dd] == global_grid_dims[dd]) dims[dd]++;
   }
 
-  printf("test3.1 %d\n",myrank);
   plist_id = H5Pcreate(H5P_FILE_ACCESS);
-  printf("test3.2 %d\n",myrank);
   #if (USE_MPI==TRUE)
   H5Pset_fapl_mpio(plist_id, MPI_COMM_WORLD, MPI_INFO_NULL);
   #endif
@@ -3412,7 +3418,9 @@ void restart_dump_v2()
   /* DR: output all of the primitives at once */
   int mycount = get_prims_count();
   int * counts = malloc(numprocs*sizeof(int));
+#if (USE_MPI==TRUE)
   MPI_Allgather(&mycount, 1, MPI_INT, counts, 1, MPI_INT, MPI_COMM_WORLD);
+#endif
 
   double * prims = malloc(mycount*sizeof(double));
   pack_prims(sim_p, prims);

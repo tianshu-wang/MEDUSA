@@ -18,6 +18,7 @@ double rtrans_solve(double dx, double rout)
   double rs,fl,fr,fm,fp,f;
   double rg = 100*rout;
 
+
 #if(RCOORD!=UNIFORM)
   // do a little bisection first
   rs = 0.1*dx;

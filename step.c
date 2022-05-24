@@ -67,7 +67,6 @@ void step()
     firstc = 0;
   }
 */
-  printf("test0 %d\n",myrank);
   // At this point, assume everything is on gpu and mpi-related cells are updated between cpu and gpu.
   #if (DO_HYDRO==TRUE)
   set_shock_flag(0);  //on gpu // initialize shock_flag so that no grid aligned shocks are tagged
@@ -81,20 +80,17 @@ void step()
   complete_mpi_communication(0); // on cpu, modification on mpi cells
   GPU_PRAGMA(omp target update to(sim_p[cell_count:cell_count_recv][:nvars],\
   			          sim_shock_flag[cell_count:cell_count_recv]))
-  printf("test1 %d\n",myrank);
   complete_mpi_bc(0); // on gpu
   update_eos_ghost(eostable,sim_p,sim_eos); // on gpu
   ND_FUNC(prim_to_fluxes,NDIM)(sim_p); // on gpu
   p_to_phys_src_finish(sim_p,1*dt); // on gpu
   push(dt, sim_p, sim_p, sim_ph, 0); // on gpu
-  printf("test1.7 %d\n",myrank);
   mpi_recv_tracers(); // ignored
   push_tracers(sim_p, dt, 0); // ignored
   mpi_send_tracers(0); // ignored
   #if (GEOM==SPHERICAL && NDIM==3 && POLAR_AVG==TRUE)
   avg_poles_3d(sim_ph);
   #endif
-  printf("test2 %d\n",myrank);
 
   // update p^n to p^n+1
   reset_boundaries_gpu(sim_ph,1); 
