@@ -31,7 +31,7 @@ include machine.mk
 SRC=main.c array.c mpi.c utils.c step.c geometry.c rad_fluid.c fluid.c riemann.c reconstruct.c bc.c io.c eos.c timer.c quadrupole.c tracer.c
 FSRC=
 HDR=decs.h defs.h constants.h timer.h enumerators.h build.h
-EXE=fornax
+EXE=medusa
 
 include setup.mk
 -include testing.mk
