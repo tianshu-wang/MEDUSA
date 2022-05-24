@@ -501,7 +501,7 @@ void prim_to_fluxes1(double NDP_PTR p)
   TIMER_START("prim_to_fluxes1");
 
   GPU_PRAGMA(omp target data map(alloc:pl,pr,alpha,beta,Gamma,x,kappa,sc,delta,chil,chir,flux,vedge)){
-	GPU_PRAGMA(omp target teams distribute parallel for private(alpha,beta,Gamma,x,pencil,pleft,pright,sig_speed,pl,pr,chir,chil,flux,vedge) shared(sim_fdir0,sim_vedgedir0) reduction(min:min_dt))
+	GPU_PRAGMA(omp target teams distribute parallel for private(alpha,beta,Gamma,x,sig_speed,pl,pr,chir,chil,flux,vedge) shared(sim_fdir0,sim_vedgedir0) reduction(min:min_dt))
 	for (i=istart[0]; i<=istop[0]; i++) {
                 double pencil[NSIZE][2*NG];
                 double pleft [NSIZE][2*NG];
@@ -676,8 +676,11 @@ void prim_to_fluxes2(double NDP_PTR p)
   TIMER_START("prim_to_fluxes2");
 
   //GPU_PRAGMA(omp target ){
-	GPU_PRAGMA(omp target teams distribute parallel for private(pencil,pleft,pright) shared(sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1) reduction(min:min_dt))
+	GPU_PRAGMA(omp target teams distribute parallel for shared(sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1) reduction(min:min_dt))
   for(int II=0;II<cell_count_all;II++) {
+    double pencil[NSIZE][2*NG];
+    double pleft [NSIZE][2*NG];
+    double pright[NSIZE][2*NG];
     double flux[NSIZE],vriemann[NSIZE];
     double pl[NSIZE], pr[NSIZE],pp[NSIZE];
     double alpha[2*NG],beta[2*NG],Gamma[2*NG],x[2*NG];

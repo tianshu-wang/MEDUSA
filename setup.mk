@@ -1,1 +1,1 @@
-setups/ccsn_1d.mk
+setups/ccsn_3d.mk

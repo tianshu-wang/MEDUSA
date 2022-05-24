@@ -595,8 +595,8 @@ uint64_t my_gridcell_count()
   int s0,s1,s2;
   int i,j;
   int offset[NDIM];
-  //static uint64_t cnt = 0;
-  uint64_t cnt = 0;
+  static uint64_t cnt = 0;
+  //uint64_t cnt = 0;
 
   if (cnt==0) {
     s0 = my_grid_dims[0] + 2*NG;
@@ -1517,6 +1517,7 @@ void allocate_memory()
   ijk_to_I = dendritic_malloc_int_square();
 
   calc_cellcenter_maps();
+		fprintf(stderr,"cell centered maps done...");
   //test
 //  GPU_PRAGMA(omp target teams distribute parallel for schedule(static,1))
 //  for(II=0;II<cell_count_all;II++){
@@ -1532,6 +1533,7 @@ void allocate_memory()
   face_count_1 = my_gridface_count(1);
   face_count_2 = my_gridface_count(2);
   calc_facecenter_maps();
+		fprintf(stderr,"face centered maps done...");
 
 
   #if (USE_LINEAR_ALLOCATION==TRUE)
