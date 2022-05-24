@@ -1,0 +1,41 @@
+#!/bin/bash
+@(#SBATCH -d afterok:@CHAINED_JOB_ID@)@
+#SBATCH -t @WALLTIME@
+#SBATCH -N @NODES@ -n @NUM_PROCS@ -c @NUM_THREADS@
+#SBATCH -J @SIMULATION_NAME@
+#SBATCH -e @RUNDIR@/@SIMULATION_NAME@.err
+#SBATCH -o @RUNDIR@/@SIMULATION_NAME@.out
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=@EMAIL@
+
+source /etc/profile
+module purge
+module load intel/18.0/64/18.0.2.199
+module load intel-mkl/2018.2/2/64
+module load intel-mpi/intel/2018.2/64
+
+echo "Preparing:"
+set -x                          # Output commands
+set -e                          # Abort on errors
+
+cd @RUNDIR@
+
+echo "Checking:"
+pwd
+hostname
+date
+
+echo "Environment:"
+export GMON_OUT_PREFIX=gmon.out
+export KMP_AFFINITY=norespect,compact # verbose
+export OMP_NUM_THREADS=@NUM_THREADS@
+env | sort > ENVIRONMENT
+echo ${SLURM_NODELIST} > NODES
+
+echo "Starting:"
+time srun -N @NODES@ -n @NUM_PROCS@ -c @NUM_THREADS@ @EXECUTABLE@ @PARFILE@
+
+echo "Stopping:"
+date
+
+echo "Done."

@@ -1,0 +1,100 @@
+# Typical 3D Fornax Input File (2021/09/16)
+
+# Prepare initialization/restart data
+restart_from_1d   = 0   # flag to restart from 1-d ASCII file
+restart_from_3d   = 0   # flag to restart from a 3-d HDF5 dump
+restart_from_last = 0   # flag to ignore input file and use the most recent restart dump instead
+restart_from_hdf  = 0   # flag to restart from HDF5 dump
+#restart_delay = 0.010  # post-bounce 1-d ASCII restart file delay [s]
+model_name = <path_to_progenitors>/s9.0.swbj15.fornax  # 1D progenitor/IC data file
+
+
+# time settings
+tmax = 3.0           # max simulation runtime [s]
+initial_dt = 1.3e-6  # first time step
+dt_init_safety = 1.  #
+dt_max = 1.3e-6      # maximum dt allowed
+cfl = 0.8            # CFL number < 1
+#max_wtime = 84600   # Start writing final outputs (84600 = 46:06:40)
+
+
+# dump and restart output settings
+dump_hdf = 1       # Use HDF5 dumpfiles (as opposed to ascii). Always use HDF5 for 3D runs
+dt_dump = 0.001    # dumpfile cadence (default = 0.001 [s])
+dt_restart = 0.01  # restart file cadence (default = 0.01 [s])
+
+
+# grid/resolution settings
+n1  = 1024            # radial gridzones
+n2  = 128             # theta gridzones
+n3  = 256             # phi gridzones
+outer_radius = 3.0e9  # max radius [cm]
+ccsn_dr_min = 5.0e4   # smallest dr (in core) [cm], best to leave 5e4 [cm] = 0.5 [km]
+grid_units = km       # used for some outputs
+
+
+# tracer settings
+#dt_pdump = 0.001            # tracer dump frequency, 1 ms
+#mass_inside_tracers = 1.35  # place tracers exterior to this mass cutoff
+#n_tracer_target = 0         # place this many tracers (defaults to zero)
+
+
+# opacity and EOS files
+opac_param_file = <path_to_data>/opacbin.extendedT.param
+opac_file = <path_to_data>/opacity.SFHo.juo.horo.brem1.extendedT.bin
+eos_file = <path_to_data>/table30030050.stellarcollapse.lr2_15.5.Hempel_SFHoEOS_rho222_temp180_ye60_version_1.1_20120817.dat
+include_inelastic = 1  # include inelastic scattering
+inelastic_root = <path_to_data>/300.mixed/  # directory of inelastic scattering data
+
+num_comp = 1  # number of compositions to track (default=1 for Ye)
+
+
+# Initial perturbations settings (up to 3 regions)
+perturb_r1m = 200e5   # velocity perturbation, region 1, rmin [cm]
+perturb_r1p = 1000e5  # velocity perturbation, region 1, rmax [cm]
+perturb_l1  = 10      # velocity perturbation lmax, region 1
+perturb_m1  = 10      # velocity perturbation mmax, region 1
+perturb_n1  = 4       # velocity perturbation nmax, region 1
+perturb_dv1 = 1.0e7   # velocity perturbation amplitude [cm/s], region 1
+
+
+# decomposition file settings
+decomp_only = 0       # flag to test decomposition only without allocating or running
+decomp_from_file = 0  # flag to load decomposition proc info from file ("proc_info.txt")
+#decomp_path = <directory_path>  # directory that "proc_info.txt" is located in
+
+
+# initial rotation settings
+rotate_Omega0 = 0.0  # core rotation rate [rad s^-1] (defaults to zero)
+rotate_A = 10000     # rotation falloff radius [km]
+
+
+# gravity max multipole
+multipole_lmax = 12
+
+
+# radiation settings
+# Do not modify this unless you know what your doing and have the appropriate opacity data
+freq_type = mev  # unit for energy bins
+nr1 = 12         # number of energy bins for species 1 (electron neutrinos)
+nr2 = 12         # number of energy bins for species 2 (anti electron neutrinos)
+nr3 = 12         # number of energy bins for species 3 (other neutrinos)
+emin1 = 1.       # smallest energy for species 1 (electron neutrinos)
+emax1 = 300.     # largest energy for species 1 (electron neutrinos)
+emin2 = 1.       # smallest energy for species 2 (anti electron neutrinos)
+emax2 = 100.     # largest energy for species 2 (anti electron neutrinos)
+emin3 = 1.       # smallest energy for species 3 (other neutrinos)
+emax3 = 100.     # largest energy for species 3 (other neutrinos)
+
+force_flux_limit = 1  # force the energy density to be >= 0 and the flux to be <= cE
+use_chat = 0  # Flag to use a reduced speed of light (best to leave this zero)
+
+
+# Settings for implicit radiation solves
+implicit_err_tol = 1.e-6
+max_implicit_iter = 140
+
+
+# Spacial interpolation order settings
+hydro_interp_order = 3
+rad_interp_order = 2

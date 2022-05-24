@@ -1,0 +1,18 @@
+
+# max_steps = 20
+
+restart_from_hdf = 0 
+restart_file = restarts/restart_0001528.h5
+
+n1  = 128
+n2  = 32
+n3  = 64
+
+cfl = 0.8
+
+tmax = 1.
+
+dt_dump = 0.01
+dt_restart = 0.28
+
+hydro_interp_order = 3

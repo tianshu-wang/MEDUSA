@@ -1,0 +1,16 @@
+
+#max_steps = 10
+
+n1  = 200
+n2  = 200
+n3  = 32
+
+cfl = 0.8
+
+tmax = 2.0
+
+dt_dump = 0.1 
+dt_restart = 5.
+
+hydro_interp_order = 3
+

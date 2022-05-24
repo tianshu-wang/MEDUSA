@@ -1,0 +1,39 @@
+tmax = 0.7
+dt_dump = 0.001
+
+n1  = 608
+n2  = 256
+n3  = 1
+cfl = 0.65
+#restart_from_1d = 1
+#model_name = dumps_save5/dump_00140
+model_name = model
+num_comp = 1	# Ye
+
+initial_dt = 1.3e-6	#1.e-6
+dt_init_safety = 1.	#0.1
+
+freq_type = mev
+nr1 = 12
+nr2 = 0
+nr3 = 0
+emin1 = 1.
+emax1 = 300.
+emin2 = 1.
+emax2 = 100.
+emin3 = 1.
+emax3 = 100.
+
+use_chat = 0
+#chat = 1.
+
+dT_tol = 0.1
+dye_tol = 0.1
+
+implicit_err_tol = 1.e-10
+max_implicit_iter = 100
+
+#dt_max = 1.3e-6
+
+hydro_interp_order = 3
+rad_interp_order = 2

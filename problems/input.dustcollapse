@@ -1,0 +1,32 @@
+#max_steps = 10
+
+# CHOOSE 1 AND ONLY 1 TO UNCOMMENT:
+# 1. CREATE A NEW 1D ASCII DUMP FOR RESTART
+restart_from_1d = 0
+dump_hdf = 0
+# 2. RESTART FROM 1D ASCII DUMP (AND DUMP 3D HDF5)
+#restart_from_1d = 0
+#dump_hdf = 1
+# 3. RESTART FROM 3D HDF5 DUMP
+#restart_from_hdf = 0
+#restart_file =
+#dump_hdf = 1
+
+tmax = 0.065
+dt_dump = 0.00065
+dt_restart = 1000.
+
+n1  = 200
+n2  = 64
+n3  = 128
+cfl = 0.9
+
+num_comp = 0
+
+restart_from_1d = 0
+model_name = soln_1d
+
+dt_init_safety = 0.1
+
+hydro_interp_order = 3
+nstep_log=1

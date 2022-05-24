@@ -1,0 +1,64 @@
+\documentclass{article}
+
+\usepackage{amsmath}
+\usepackage[margin=1in]{geometry}
+
+\begin{document}
+
+\begin{align}
+\rho_{,t} + (\rho v^i)_{;i}  &= 0 \\
+(\rho v_j)_{,t} + (\rho v^i v_j + P \delta^i_j)_{;i} &= -\rho \phi_{,j} + c^{-1} \sum_s \int_0^\infty (\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon j} d\varepsilon \\
+\left[\rho \left(e + \frac{1}{2} \lVert v\rVert^2\right)\right]_{,t} + \left[\rho v^i \left(e + \frac{1}{2} \lVert v\rVert^2 + \frac{P}{\rho}\right)\right]_{;i} &= -\rho v^i \phi_{,i} \\ 
+ & - \sum_s \int_0^\infty \left(j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon} - \frac{v^i}{c} (\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon i}\right) d\varepsilon \\
+(\rho Y_e)_{,t} + (\rho Y_e v^i)_{;i} &= \sum_s \int_0^\infty \xi_{s\varepsilon} (j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon}) d\varepsilon \\
+E_{s\varepsilon,t} + (F_{s\varepsilon}^i + v^i E_{s\varepsilon})_{;i} - v^i_{;j}\frac{\partial}{\partial\ln\varepsilon} P_{s\varepsilon i}^j &= j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon} \\
+F_{s\varepsilon j,t} + (c^2 P_{s\varepsilon j}^i + v^i F_{s\varepsilon j})_{;i} + v^i_{;j} F_{s\varepsilon i} - v^i_{;k} Q^k_{s\varepsilon ji} - v^i_{;k} \frac{\partial}{\partial\ln\varepsilon} Q^k_{s\varepsilon ji} &= -c(\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon j}
+\end{align}
+where $e$ is the specific internal energy, $s\in\{\nu_e,\bar{\nu}_e,\nu_x\}$, 
+\begin{equation}
+\xi_{s\varepsilon} = \begin{cases}
+	-(N_A \varepsilon)^{-1}&	\text{$s=\nu_e$},\\
+	(N_A \varepsilon)^{-1}&		\text{$s=\bar{\nu}_e$},\\
+	0&							\text{$s=\nu_x$},
+	\end{cases}
+\end{equation}
+$P=P(\rho,e,Y_e)$, and we use the M1 closure to truncate the radiation moment hierarchy by specifying the second and third moments in terms of the zeroth and first.
+
+\section{Algorithm Steps}
+The following describes an Euler push (i.e. $1^{\rm st}$-order in time).  The generalization to $2^{\rm nd}$-order Runge-Kutta schemes is straightforward.
+
+\subsection{Step 1}
+Advance this subsystem by $\Delta t$:
+\begin{align}
+\rho_{,t} + (\rho v^i)_{;i}  &= 0 \\
+(\rho v_j)_{,t} + (\rho v^i v_j + P \delta^i_j)_{;i} &= -\rho \phi_{,j}\\
+\left[\rho \left(e + \frac{1}{2} \lVert v\rVert^2\right)\right]_{,t} + \left[\rho v^i \left(e + \frac{1}{2} \lVert v\rVert^2 + \frac{P}{\rho}\right)\right]_{;i} &= -\rho v^i \phi_{,i} \\ 
+(\rho Y_e)_{,t} + (\rho Y_e v^i)_{;i} &= 0 \\
+E_{s\varepsilon,t} + (F_{s\varepsilon}^i + v^i E_{s\varepsilon})_{;i} &= 0 \\
+F_{s\varepsilon j,t} + (c^2 P_{s\varepsilon j}^i + v^i F_{s\varepsilon j})_{;i} + v^i_{;j} F_{s\varepsilon i} - v^i_{;k} Q^k_{s\varepsilon ji} &= 0 
+\end{align}
+
+\subsection{Step 2}
+Advance this subsystem by $\Delta t$:
+\begin{align}
+E_{s\varepsilon,t} - v^i_{;j}\frac{\partial}{\partial\ln\varepsilon} P_{s\varepsilon i}^j &= 0 \\
+F_{s\varepsilon j,t} - v^i_{;k} \frac{\partial}{\partial\ln\varepsilon} Q^k_{s\varepsilon ji} &= 0
+\end{align}
+
+\subsection{Step 3}
+Advance this subsystem by $\Delta t$:
+\begin{align}
+(\rho v_j)_{,t} &= c^{-1} \sum_s \int_0^\infty (\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon j} d\varepsilon \\
+\left[\rho \left(e + \frac{1}{2} \lVert v\rVert^2\right)\right]_{,t} &= \sum_s \int_0^\infty \left(\frac{v^i}{c} (\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon i}\right) d\varepsilon \\
+F_{s\varepsilon j,t} &= -c(\kappa_{s\varepsilon} + \sigma^{\rm tr}_{s\varepsilon}) F_{s\varepsilon j}
+\end{align}
+
+\subsection{Step 4}
+Advance this subsystem by $\Delta t$:
+\begin{align}
+(\rho e)_{,t} &= -\sum_s \int_0^\infty \left(j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon}\right) d\varepsilon \\
+(\rho Y_e)_{,t}  &= \sum_s \int_0^\infty \xi_{s\varepsilon} (j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon}) d\varepsilon \\
+E_{s\varepsilon,t} &= j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon}
+\end{align}
+
+\end{document}

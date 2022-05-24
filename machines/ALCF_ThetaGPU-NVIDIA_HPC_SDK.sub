@@ -1,0 +1,34 @@
+#!/bin/bash
+#COBALT -t 01:00:00
+#COBALT -n 1
+#COBALT -A ecp_omp2021
+
+module load nvhpc
+
+echo "Preparing:"
+set -x                          # Output commands
+set -e                          # Abort on errors
+
+cd @RUNDIR@
+
+echo "Checking:"
+pwd
+hostname
+date
+
+export n_nodes=$COBALT_JOBSIZE
+export n_mpi_ranks_per_node=64
+export n_mpi_ranks=$(($n_nodes * $n_mpi_ranks_per_node))
+export n_openmp_threads_per_rank=@NUM_THREADS@
+
+echo "Starting:"
+aprun \
+  -n $n_mpi_ranks \
+  -N $n_mpi_ranks_per_node \
+  --env OMP_NUM_THREADS=$n_openmp_threads_per_rank \
+  -cc depth \
+  @EXECUTABLE@ @PARFILE@
+
+echo "Stopping:"
+date
+echo "Done."

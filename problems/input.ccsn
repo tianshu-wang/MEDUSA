@@ -1,0 +1,38 @@
+
+#max_steps = 2
+
+grid_units = km
+
+restart_from_hdf = 1
+restart_file = restarts/restart_0040004.h5
+
+#dump_hdf = 0
+
+L_enu = 3.e52
+T_enu = 4.0
+
+tmax = 1.0
+dt_dump = 0.001
+dt_restart = 1.
+# di_restart = 1000
+
+n1  = 608
+n2  = 128
+n3  = 512
+cfl = 0.8
+#model_name = model
+model_name = s15.wh07.fornax
+num_comp = 1	# Ye
+
+dt_init_safety = 0.1
+
+hydro_interp_order = 3
+
+eos_file = /Users/jdolence/Tables/EOS/table30030050.LS220-stellarcollapse_exploring2_100MeV.gamma.dat
+#eos_file = /Users/jdolence/Tables/EOS/LS220_240r_140t_50y_analmu_20120628_SVNr28.h5
+
+multipole_lmax = 0
+
+rho_floor = 1.0e5
+e_floor   = 1.0e-12
+

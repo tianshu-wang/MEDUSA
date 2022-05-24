@@ -1,0 +1,12 @@
+# See Test 1 of Toro (1999)
+
+tmax = 0.2
+dt_dump = 0.05
+dt_restart = 1000.0
+
+n1  = 100
+n2  = 1
+n3  = 1
+cfl = 0.9
+
+hydro_interp_order = 3

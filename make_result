@@ -1,0 +1,118 @@
+Creating build.h with compile time definitions
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel main.c -o obj/main.o
+main:
+     46, #omp target teams num_teams(1)
+         46, Generating Tesla and Multicore code
+             Generating "nvkernel_main_F1L46_1" GPU kernel
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel array.c -o obj/array.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel mpi.c -o obj/mpi.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel utils.c -o obj/utils.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel step.c -o obj/step.o
+dt_source_control:
+    180, Generating implicit device routine
+         Generating Tesla code
+push:
+    361, #omp target teams distribute parallel for
+        361, Generating "nvkernel_push_F1L361_1" GPU kernel
+             Generating Tesla and Multicore code
+             Generating reduction(min:min_dt_src,.min_dt_src4503p)
+             Loop parallelized across teams and threads(128), schedule(static)
+    361, Generating map(tofrom:min_dt_src) 
+         Generating implicit map(tofrom:sim) 
+         Generating map(tofrom:I_to_ijk[:],cell_count) 
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel geometry.c -o obj/geometry.o
+geom_dot:
+     66, Generating device routine
+         Generating Tesla code
+geom_lower:
+     76, Generating device routine
+         Generating Tesla code
+geom_raise:
+     85, Generating device routine
+         Generating Tesla code
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel rad_fluid.c -o obj/rad_fluid.o
+p_to_u:
+      9, Generating device routine
+         Generating Tesla code
+u_to_p:
+     22, Generating device routine
+         Generating Tesla code
+implicit_source_update:
+    334, Generating device routine
+         Generating Tesla code
+implicit_source_update_tianshu:
+    362, Generating device routine
+         Generating Tesla code
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel fluid.c -o obj/fluid.o
+hydro_p_to_u:
+      5, Generating device routine
+         Generating Tesla code
+hydro_u_to_p:
+     28, Generating device routine
+         Generating Tesla code
+hydro_stress_tensor:
+     57, Generating device routine
+         Generating Tesla code
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel riemann.c -o obj/riemann.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel reconstruct.c -o obj/reconstruct.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel bc.c -o obj/bc.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel io.c -o obj/io.o
+"io.c", line 10: warning #301-D: typedef name has already been declared (with same type)
+  typedef unsigned short int u_short;
+                             ^
+
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel eos.c -o obj/eos.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel timer.c -o obj/timer.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel quadrupole.c -o obj/quadrupole.o
+"quadrupole.c", line 28: warning #111-D: statement is unreachable
+      ierr = array_init(sizeof(t),     &qpole_time); assert(!ierr);
+      ^
+
+"quadrupole.c", line 37: warning #111-D: statement is unreachable
+      array_free(qpole_time); qpole_time = NULL;
+      ^
+
+"quadrupole.c", line 46: warning #185-D: dynamic initialization in unreachable code
+      TIMER_START("quadrupole_start");
+      ^
+
+"quadrupole.c", line 176: warning #185-D: dynamic initialization in unreachable code
+      TIMER_START("quadrupole_dump");
+      ^
+
+"quadrupole.c", line 227: warning #185-D: dynamic initialization in unreachable code
+      TIMER_START("quadrupole_end");
+      ^
+
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel tracer.c -o obj/tracer.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel problems/init_ccsn.c -o obj/init_ccsn.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel decompose.c -o obj/decompose.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel metrics/metric_spherical_general.c -o obj/metric_spherical_general.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel gravity.c -o obj/gravity.o
+"gravity.c", line 688: warning #185-D: dynamic initialization in unreachable code
+    TIMER_START("multipole_gravity_start");
+    ^
+
+"gravity.c", line 784: warning #185-D: dynamic initialization in unreachable code
+    TIMER_START("multipole_gravity_finish");
+    ^
+
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel eos/burrows/eos_collapse.c -o obj/eos_collapse.o
+mpicc -c -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel eos/burrows/eos_stuff.c -o obj/eos_stuff.o
+"eos/burrows/eos_stuff.c", line 1518: warning #111-D: statement is unreachable
+        if (f1[nn-1]<0.e0){
+        ^
+
+mpicc -O3 -std=c99 --diag_suppress=177,550 --display_error_number -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel  obj/main.o obj/array.o obj/mpi.o obj/utils.o obj/step.o obj/geometry.o obj/rad_fluid.o obj/fluid.o obj/riemann.o obj/reconstruct.o obj/bc.o obj/io.o obj/eos.o obj/timer.o obj/quadrupole.o obj/tracer.o obj/init_ccsn.o obj/decompose.o obj/metric_spherical_general.o obj/gravity.o obj/eos_collapse.o obj/eos_stuff.o -o fornax -lm -lnvf -lmpi_mpifh -L/lus/theta-fs0/software/thetagpu/hdf5/1.12.0/lib -lhdf5 -v -mp=gpu -gpu=cc80,managed,lineinfo -Minfo=mp,accel
+Export PGI_CURR_CUDA_HOME=/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4
+Export NVHPC_CURRENT_CUDA_HOME=/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4
+Export NVHPC_CURRENT_CUDA_VERSION=11.4.43
+Export NVCOMPILER=/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7
+Export PGI=/lus/theta-fs0/software/thetagpu/hpc-sdk
+
+/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/bin/tools/acclnk -nvidia /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/bin/tools/nvdd -cuda11040 -cudaroot /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4 -computecap=80 -computecap=80 -unifiedmem -init=ctxrel -init=managed -v /usr/bin/ld /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/trace_init.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/nvhpc.ld -L/lus/theta-fs0/software/thetagpu/hdf5/1.12.0/lib -L/lus/theta-fs0/software/thetagpu/openmpi/openmpi-4.0.5_ucx-1.10.0_hpc_sdk-21.7/lib -L/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib -L/usr/lib64 -L/usr/lib/gcc/x86_64-linux-gnu/9 obj/main.o obj/array.o obj/mpi.o obj/utils.o obj/step.o obj/geometry.o obj/rad_fluid.o obj/fluid.o obj/riemann.o obj/reconstruct.o obj/bc.o obj/io.o obj/eos.o obj/timer.o obj/quadrupole.o obj/tracer.o obj/init_ccsn.o obj/decompose.o obj/metric_spherical_general.o obj/gravity.o obj/eos_collapse.o obj/eos_stuff.o -lm -lnvf -lmpi_mpifh -lhdf5 -rpath /lus/theta-fs0/software/thetagpu/openmpi/openmpi-4.0.5_ucx-1.10.0_hpc_sdk-21.7/lib --enable-new-dtags -lmpi -rpath /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib -rpath /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4/lib64 -rpath /usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib64 -o fornax -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib64 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_cuda.o /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_mp.o -lacchost -laccdevaux -laccdevice -lhxrt_dev -lnvhpcman -ldl -lcudadevice -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread --start-group -lnvcpumath -lnsnvc -lnvc --end-group -lm -lgcc -lc -lgcc -lgcc_s /usr/lib/gcc/x86_64-linux-gnu/9/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
+/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/bin/tools/nvdd -cudaallowundefgbls -dcuda /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/trace_init.o -L/lus/theta-fs0/software/thetagpu/hdf5/1.12.0/lib -L/lus/theta-fs0/software/thetagpu/openmpi/openmpi-4.0.5_ucx-1.10.0_hpc_sdk-21.7/lib -L/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib -L/usr/lib64 -L/usr/lib/gcc/x86_64-linux-gnu/9 obj/main.o obj/array.o obj/mpi.o obj/utils.o obj/step.o obj/geometry.o obj/rad_fluid.o obj/fluid.o obj/riemann.o obj/reconstruct.o obj/bc.o obj/io.o obj/eos.o obj/timer.o obj/quadrupole.o obj/tracer.o obj/init_ccsn.o obj/decompose.o obj/metric_spherical_general.o obj/gravity.o obj/eos_collapse.o obj/eos_stuff.o -lm -lnvf -lmpi_mpifh -lhdf5 -lmpi -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib64 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_cuda.o /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_mp.o -lacchost -laccdevaux -laccdevice -lhxrt_dev -lnvhpcman -ldl -lcudadevice -lnvomp -ldl -lnvhpcatm -latomic -lpthread -lnvcpumath -lnsnvc -lnvc -lm -lgcc -lc -lgcc_s -dolink -cuda11040 -computecap 80 -o /tmp/pgcudabKf8pdCaMiuXY.cubin
+/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/bin/tools/nvdd -fatobj /tmp/pgcudafatjKf8pB8JAt1Bw.o -o /tmp/pgcudafatjKf8pB8JAt1Bw.o -cuda11040 -dcuda /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4 -init=ctxrel -init=managed -sm 80 /tmp/pgcudabKf8pdCaMiuXY.cubin
+/usr/bin/ld /usr/lib/x86_64-linux-gnu/crt1.o /usr/lib/x86_64-linux-gnu/crti.o /tmp/pgcudafatjKf8pB8JAt1Bw.o /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/trace_init.o /usr/lib/gcc/x86_64-linux-gnu/9/crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/nvhpc.ld -L/lus/theta-fs0/software/thetagpu/hdf5/1.12.0/lib -L/lus/theta-fs0/software/thetagpu/openmpi/openmpi-4.0.5_ucx-1.10.0_hpc_sdk-21.7/lib -L/lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib -L/usr/lib64 -L/usr/lib/gcc/x86_64-linux-gnu/9 obj/main.o obj/array.o obj/mpi.o obj/utils.o obj/step.o obj/geometry.o obj/rad_fluid.o obj/fluid.o obj/riemann.o obj/reconstruct.o obj/bc.o obj/io.o obj/eos.o obj/timer.o obj/quadrupole.o obj/tracer.o obj/init_ccsn.o obj/decompose.o obj/metric_spherical_general.o obj/gravity.o obj/eos_collapse.o obj/eos_stuff.o -lm -lnvf -lmpi_mpifh -lhdf5 -rpath /lus/theta-fs0/software/thetagpu/openmpi/openmpi-4.0.5_ucx-1.10.0_hpc_sdk-21.7/lib --enable-new-dtags -lmpi -rpath /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib -rpath /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/cuda/11.4/lib64 -rpath /usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib64 -o fornax -L/usr/lib/gcc/x86_64-linux-gnu/9/../../../../lib64 /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_cuda.o /lus/theta-fs0/software/thetagpu/hpc-sdk/Linux_x86_64/21.7/compilers/lib/acc_init_link_mp.o -lacchost -laccdevaux -laccdevice -lhxrt_dev -lnvhpcman -ldl -lcudadevice -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread --start-group -lnvcpumath -lnsnvc -lnvc --end-group -lm -lgcc -lc -lgcc -lgcc_s /usr/lib/gcc/x86_64-linux-gnu/9/crtend.o /usr/lib/x86_64-linux-gnu/crtn.o
+unlink /tmp/pgcudafatjKf8pB8JAt1Bw.o
+unlink /tmp/pgcudabKf8pdCaMiuXY.cubin

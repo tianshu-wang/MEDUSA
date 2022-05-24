@@ -1,0 +1,112 @@
+# SPECIFY DEBUGGING FLAGS
+DEBUG=FALSE
+PRINT_OPAC_DATA=FALSE
+
+# SPECIFY THE NUMBER OF DIMENSIONS
+#NDIM = 1
+NDIM = 2
+#NDIM = 3
+
+# SPECIFY THE PROBLEM FILE
+#PROB=init_advection.c
+#PROB=init_sedov.c
+#PROB=init_sedov_cart.c
+#PROB=init_constant_sphere.c
+#PROB=init_sod.c
+#PROB=init_sod_toro.c
+#PROB=init_sawtooth.c
+#PROB=init_sod_extreme.c
+#PROB=init_sod_extreme2.c
+#PROB=init_wc_blast.c
+#PROB=init_double_rare.c
+#PROB=init_rt.c
+#PROB=init_kh.c
+#PROB=init_2dimplode.c
+#PROB=init_triple.c
+#PROB=init_sod_circle.c
+#PROB=init_noh.c
+#PROB=init_spherical_noh.c
+#PROB=init_spherical_advection.c
+#PROB=init_spherical_wind.c
+#PROB=init_stalled_shock.c
+#PROB=init_hydrostatic.c
+#PROB=init_dustcollapse.c
+#PROB=init_ccsn.c
+#PROB=init_polytrope.c
+#PROB=init_one_zone_cool.c
+#PROB=init_one_zone_equil.c
+#PROB=init_1dtransport.c
+#PROB=init_spherical_transport.c
+PROB=init_rad_ccsn.c
+#PROB=init_rad_advection.c
+#PROB=init_rad_sph_transport.c
+#PROB=init_off_center_blast.c
+#PROB=init_ss_disk.c
+
+# SPECIFY THE GEOMETRY AND GRID STRUCTURE
+GEOM=SPHERICAL
+#GEOM=CYLINDRICAL
+#GEOM=CARTESIAN
+
+# CHECK ENERGY AND DENSITY FLOORS?
+#ENFORCE_FLOORS=FALSE
+ENFORCE_FLOORS=TRUE
+
+# USE POLAR AVERAGING SCHEME
+POLAR_AVG=FALSE
+
+#---------------------#
+# SPECIFY THE PHYSICS
+#---------------------#
+# HYDRO?
+DO_HYDRO=TRUE
+#DO_HYDRO=FALSE
+
+# GRAVITY?
+#GRAV=NO_GRAV
+#GRAV=FIXED_GRAV
+#GRAV=PRESCRIBED_GRAV
+#PN_POTENTIAL=TRUE
+PN_POTENTIAL=FALSE
+GRAV=SPHERICAL_MONOPOLE_GRAV
+#GRAV=SPHERICAL_MULTIPOLE_GRAV
+#GR_MONOPOLE=FALSE
+GR_MONOPOLE=TRUE
+
+# RADIATION?
+DO_RADIATION=TRUE
+#DO_RADIATION=FALSE
+NEUTRINO=TRUE	# EITHER NEUTRINO OR PHOTON, BUT NOT BOTH
+PHOTON=FALSE
+#PHOTON=TRUE
+#NEUTRINO=FALSE
+
+# OPACITIES/EMISSIVITIES
+OPAC=COLLAPSE
+#OPAC=BREMSSTRAHLUNG
+#OPAC=PURE_SCATT
+#OPAC=NULL
+
+# PERTURBATIONS? (See Muller & Janka 2015, Summa et al. 2016)
+# Make sure libgsl and libgslcblas can be found, or else set GSL_DIR somewhere
+#PERTURB=NONE
+PERTURB=VELOCITY_SPHERICAL_HARMONIC
+#PERTURB=DENSITY_RANDOM
+
+# ROTATING MODEL?
+DO_ROTATION=FALSE
+#DO_ROTATION=FALSE
+
+# SHOULD WE CALL USER DEFINED SOURCE FUNCTIONS?
+#USE_EXT_SRC=TRUE
+USE_EXT_SRC=FALSE
+#USE_AUX_SRC=TRUE
+USE_AUX_SRC=FALSE
+
+# EOS
+#EOS=GAMMA_LAW
+#EOS=POLYTROPIC
+EOS=COLLAPSE
+
+# SHOULD WE TIME THE RUN?
+DO_TIMING=TRUE

@@ -1,0 +1,32 @@
+#! /bin/bash
+
+echo "Preparing:"
+set -x                          # Output commands
+set -e                          # Abort on errors
+
+module purge
+module load hdf5/gcc/openmpi-1.8.8/1.8.15
+module load openmpi/gcc/1.8.8/64
+
+cd @RUNDIR@
+
+echo "Checking:"
+pwd
+hostname
+date
+
+echo "Environment:"
+export GMON_OUT_PREFIX=gmon.out
+export KMP_AFFINITY=norespect,compact # verbose
+export OMP_NUM_THREADS=@NUM_THREADS@
+env | sort > ENVIRONMENT
+
+echo "Starting:"
+time  mpirun -np @NUM_PROCS@ -v @EXECUTABLE@ @PARFILE@ \
+    1> @SIMULATION_NAME@.out \
+    2> @SIMULATION_NAME@.err
+
+echo "Stopping:"
+date
+
+echo "Done."

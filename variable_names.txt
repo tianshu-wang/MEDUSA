@@ -1,0 +1,37 @@
+Names/meanings of data in the dump files
+
+datasets:
+Flux0_0: nu_0/nu_e energy flux in dir 0 (r hat)
+Flux0_1: nu_0 flux in dir 1 (theta hat)
+Flux0_2: nu_0 flux in dir 2 (phi hat)
+Flux1_0: nu_1/\bar{\nu_e} flux
+Flux1_1: ...
+Flux1_2: ...
+Flux2_0: nu_2/other nu flux
+Flux2_1: ...
+Flux2_2: ...
+Time: time in sec
+comp0: Ye
+eos0: pressure
+eos1: c_s
+eos2: T
+eos3: specific entropy
+eos4: Gamma
+lapse: cell averaged lapse function
+lapse_edge: lapse function at outer radial edge???
+rho: density
+u: internal energy density?
+u1: r velocity
+u2: theta velocity
+u3: phi velocity
+velocity0: = x velocity (cartesian)
+velocity1: = y velocity
+velocity2: = z velocity
+
+Groups:
+Erad0: nu_0 spectra, heating, cooling
+Erad1: nu_1 ...
+Erad2: nu_2 ...
+Frad0: Frad0_i Cartesian components
+Frad1: Frad1_i Cartesian components
+Frad2: Frad2_i Cartesian components

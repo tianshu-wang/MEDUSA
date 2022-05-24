@@ -1,0 +1,18 @@
+restart_from_hdf = 0
+restart_file = 
+
+dump_hdf = 1
+
+n1  = 64 #256
+n2  = 64 #256
+n3  = 128 #512
+cfl = 0.95
+
+num_comp = 1
+
+tmax = 15.0
+
+dt_dump = 0.1
+dt_restart = 1.0
+
+hydro_interp_order = 3

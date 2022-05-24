@@ -1,0 +1,8 @@
+
+n1  = 1200 
+n2  = 1
+n3  = 1
+cfl = 0.8
+
+hydro_interp_order = 3
+

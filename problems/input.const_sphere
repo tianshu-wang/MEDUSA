@@ -1,0 +1,17 @@
+
+# max_steps = 1
+
+tmax = 200
+dt_dump = 10.
+dt_restart = 1000.
+# di_restart = 1000
+
+n1  = 384
+n2  = 64
+n3  = 128
+cfl = 100.
+
+dt_init_safety = 0.1
+
+hydro_interp_order = 3
+

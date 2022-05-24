@@ -1,0 +1,14 @@
+n1  = 64
+n2  = 128
+n3  = 32
+
+cfl = 0.95
+
+tmax = 6.0
+
+num_comp = 1
+
+dt_dump = 0.01 
+dt_restart = 1.0
+
+hydro_interp_order = 3

@@ -1,0 +1,1285 @@
+118d117
+<   #else	// DO_HYDRO==FALSE, no hydro/transport
+120,122d118
+<   #if (DO_RADIATION==TRUE)
+<   update_eos(sim_p,sim_eos);
+<   apply_implicit_sources(sim_p,dt);
+125c121
+<   #endif
+---
+>   
+129,131d124
+<   #if (DO_RADIATION==TRUE)
+<   if (use_chat) set_chat();
+<   #endif
+232,241d224
+< double dt_inel_control(double Etot_old,double Etot_new,double Ye_old,double Ye_new,double T_old,double T_new,double dtold){
+<   double mdt_Etot,mdt_Ye,mdt_T,mdt;
+<   const double alpha = 0.02;
+<   mdt_Etot = alpha*Etot_old/(fabs(Etot_new-Etot_old)/dtold+1.0e-16);
+<   //mdt_Ye = alpha*Ye_old/(fabs(Ye_new-Ye_old)/dtold+1.0e-16);
+<   mdt_T = alpha*T_old/(fabs(T_new-T_old)/dtold+1.0e-16);
+<   mdt = MIN(mdt_Etot,mdt_T);
+<   return mdt;
+< }
+< 
+389,401d371
+<   /*
+<   int valid = 1;
+<   double test[10];
+<     printf("loop_indices:       %p\n", I_to_ijk);
+<     printf("loop_indices[0]:    %p\n", I_to_ijk[0]);
+<     printf("loop_indices[1][2]: %d\n", I_to_ijk[1][2]);
+< GPU_PRAGMA(omp target map(I_to_ijk[:3]))
+<   {
+<     printf("loop_indices:       %p\n", I_to_ijk);
+<     printf("loop_indices[0]:    %p\n", I_to_ijk[0]);
+<     printf("loop_indices[1][2]: %d\n", I_to_ijk[1][2]);
+<   }
+<   */
+422,432d391
+< 
+<     // get the frequency advection fluxes
+<     #if (DO_RADIATION)
+<     calc_gradv(ph, ii, jj, kk, gradv);
+<     freq_advection(ffact*dtpush, uh, gm, gradv, freq_flux
+<       #if (GR_MONOPOLE==TRUE)
+<       , gr_freq_flux, gr_grav[ii]
+<       #endif
+<         );
+<     #endif
+< 
+480a440
+> 
+486,508d445
+< 
+<     #if (DO_RADIATION)
+<     // frequency advection update
+<     GLOOP { if (isnan(u[irad1+g])) printf("2: NAN DETECTED:  g=%d, u[g]=%e\n",g,u[irad1+g]); }
+<     GLOOP {
+<       u[irad1+g] += ffact*dtpush*egroup_erg[g]*(freq_flux[g+1] - freq_flux[g]);
+<       DLOOP {
+<         u[ifrad1+g*NDIM+dd] += ffact*dtpush*(freq_flux[ngroups+(g+1)*NDIM+dd] - freq_flux[ngroups+g*NDIM+dd]);
+<       }
+<       if (isnan(u[irad1+g])) printf("2.0: NAN DETECTED:  g=%d, u[g]=%e, freq_flux[g+1]=%e, freq_flux[g]=%e, egroup=%e\n",
+<         g,u[irad1+g],freq_flux[g+1],freq_flux[g],egroup_erg[g]);
+< 
+<       #if (GR_MONOPOLE==TRUE)
+<       // AS: Note that the lapses are already multiplied into gr_freq_flux
+<       u[irad1+g] += ffact*dtpush*egroup_erg[g]*(gr_freq_flux[g+1] - gr_freq_flux[g]);
+<       DLOOP {
+<         u[ifrad1+g*NDIM+dd] += ffact*dtpush*(gr_freq_flux[ngroups+(g+1)*NDIM+dd] - gr_freq_flux[ngroups+g*NDIM+dd]);
+<       }
+<       #endif
+<     }
+<     #endif
+< 
+< 
+513,529d449
+< #if (USE_LARGER_STEP==TRUE)
+<     if(Ncurrent==0&&stage==0){
+<       VLOOP{uaux[vv]=u[vv];}
+<       EOSLOOP{eosaux[vv]=NDP_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk,vv);}
+<       status = implicit_source_update_tianshu(uaux, eosaux, gm, Nskip*dtpush);
+<       VLOOP{NDP_ELEM(sim_dudt,ii,jj,kk,vv)=(uaux[vv]-u[vv])/(Nskip*dtpush);}
+<       EOSLOOP{NDP_ELEM(sim_deosdt,ii,jj,kk,vv)=(eosaux[vv]-NDP_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk,vv))/(Nskip*dtpush);}
+<     }
+<     else{
+<       status = 1;
+<     }
+<     //Update variables
+<     VLOOP{u[vv]+=NDP_ELEM(sim_dudt,ii,jj,kk,vv)*dtpush*ffact;};
+<     EOSLOOP{NDP_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk,vv)+=NDP_ELEM_REORDERED(sim_deosdt,ii,jj,kk,vv)*dtpush*ffact;}
+< #else
+<     status = implicit_source_update_tianshu(u, ND_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk), gm, ffact*dtpush);
+< #endif
+531,537d450
+< #if (INEL_DT_CONTROL==TRUE)
+<     // Estimate next time step by looking at the change in ETOT and Ye.
+<     Etot_new = 0;
+<     GLOOP{Etot_new += u[irad1+g];}
+<     min_dt_inel = dt_inel_control(Etot_old,Etot_new,Ye_old,u[YE],T_old,NDP_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk,TEMP),dtpush);
+<     min_dt_src = MIN(min_dt_src,min_dt_inel);
+< #endif
+554,558d466
+<     #if (DO_RADIATION)
+<     // do this operator split update of the rad flux, mom deposition, and work *last* to ensure the proper diffusion limit
+<     rad_src_update(u, NDP_ELEM_LINEAR_REORDERED(sim_eos,ii,jj,kk,TEMP), gm, ffact*dtpush, ii, jj, kk);
+<     #endif
+< 
+648,673d555
+< 		min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 		#endif
+< 
+< 		#if (DO_RADIATION)
+< 		// update vmax for computing chat for radiation
+< 		if (ss*ND_ELEM_LINEAR(geom,i,j,k).scale[1][0] > vmax) vmax = ss*ND_ELEM_LINEAR(geom,i,j,k).scale[1][0];
+< 	        // get the optical depth of zone i-1
+< 	        opac_emis(NDP_ELEM_LINEAR(p,i-1,jj,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i-1,jj,kk,TEMP), NDP_ELEM_LINEAR(p,i-1,jj,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+< 	        GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+< 		// get the opacity of zone i
+< 		opac_emis(NDP_ELEM_LINEAR(p,i,jj,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i,jj,kk,TEMP), NDP_ELEM_LINEAR(p,i,jj,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+< 		GLOOP {
+< 			chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+< 			chil[g] *= 0.5;
+< 			chil[g] += 0.5*chir[g];
+< 		}
+< 		// get the fluxes of radiation variables at this interface
+< 		rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+< 		// copy chir into chil for the next interface
+< 		//memcpy(chil, chir, ngroups*sizeof(double));
+< 
+< 		// update estimate for next time step, if necessary
+< 		//if (fabs(ss) > 3.0e10) {
+< 		//	fprintf(stderr,"ss > c in zone %d\n", i);
+< 		//}
+779,782c661,666
+<   int i,i0,ii,j,jj,k,kk,dd,vv,g,size;
+<   int jm,jp,njp,isshock,jlev,s;
+<   int jstart,jstop;
+<   double ss,vol_sum,vol_frac;
+---
+>   int i,i0,ii,j,jj,k,kk,dd,vv,g;
+>   //double kappa[ngroups]; //need statically allocated later
+>   //double sc[ngroups];
+>   //double delta[ngroups];
+>   //double chil[ngroups];
+>   //double chir[ngroups];
+786,965c670,686
+< 	if (firstc) {
+< 		{
+<       pl     = malloc_rank1(ninterp,      sizeof *pl   );
+<       pr     = malloc_rank1(ninterp,      sizeof *pr   );
+<       pp     = malloc_rank1(ninterp,      sizeof *pp   );
+<       alpha  = malloc_rank1(max_grid_dim, sizeof *alpha);
+<       //alpha += NG;
+<       beta   = malloc_rank1(max_grid_dim, sizeof *beta );
+<       //beta  += NG;
+<       Gamma  = malloc_rank1(max_grid_dim, sizeof *Gamma);
+<       //Gamma += NG;
+<       x      = malloc_rank1(max_grid_dim, sizeof *x    );
+<       //x     += NG;
+<       #if (DO_RADIATION==TRUE)
+<       kappa  = malloc_rank1(ngroups,      sizeof *kappa);
+<       sc     = malloc_rank1(ngroups,      sizeof *sc   );
+<       delta  = malloc_rank1(ngroups,      sizeof *delta);
+<       chil   = malloc_rank1(ngroups,      sizeof *chil );
+<       chir   = malloc_rank1(ngroups,      sizeof *chir );
+<       #endif
+< 		}
+< 		firstc = 0;
+< 	}
+< 
+<   #if (GEOM == SPHERICAL || GEOM==CYLINDRICAL)
+<   if (istop_jrefine > 0 && istart[0]-NG < istop_jrefine) {
+<     // Compute fluxes in 0-direction on the dendritic part of the grid
+<     for (i=istart[0]; i<=MIN(istop[0], istop_jrefine+NG-1); i++) {
+<       JSLOOP(i,j) {
+<         // for each i,j pair, create a pencil in the 0-direction
+<         for (ii=i-NG; ii<i+NG; ii++) {
+<           alpha[NG+ii-i] = alpha0[ii];
+<           beta [NG+ii-i] = beta0 [ii];
+<           Gamma[NG+ii-i] = Gamma0[ii];
+<           x    [NG+ii-i] = startx[0] + ii*dx[0];
+< 
+<           if (DJS(ii) < DJS(i)) {
+<             restrict0(p,sim_eos,geom,i,j,ii,pp);
+<           } else {
+<             prolongate0(p,sim_eos,i,j,ii,pp);
+<           }
+<           ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+<         }
+< 
+<         interp(pencil, pleft, pright, alpha, beta, Gamma, x, 0);
+< 
+<         ILOOP {
+<           pl[vv] = pright[vv][NG-1];
+<           pr[vv] = pleft [vv][NG+0];
+<         }
+< 
+<         isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+< 
+<         if (isshock) {
+<           ND_ELEM_LINEAR(sim_shock_flag,i,j,0) = 0;
+<           jm = j*DJS(i)/DJS(i-1);
+<           ND_ELEM_LINEAR(sim_shock_flag,i-1,jm,0) = 0;
+<           jm = j*DJS(i)/DJS(i-2);
+<           ND_ELEM_LINEAR(sim_shock_flag,i-2,jm,0) = 0;
+<         }
+< 
+<         min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 
+<         #if (DO_RADIATION)
+<    	// get the opacity of zone
+<     	opac_emis(NDP_ELEM_LINEAR(p,i,j,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,kk,TEMP), NDP_ELEM_LINEAR(p,i,j,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+< 	GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<     	// get the fluxes of radiation variables at this interface
+< 	rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+<    	// update estimate for next time step, if necessary
+<         min_dt = MIN(min_dt,dx[0]/fabs(ss));
+<     	#endif
+<       }  /* end for j */
+<     }  /* end for i */
+<     // ii = MAX(istart[0],MIN(istop[0]+1, istop_jrefine+NG));
+<   }  /* end if */
+<   ii = MAX(istart[0],MIN(istop[0],istop_jrefine-1)+1);
+<   if (istop_jrefine <= 0) ii = istart[0];
+<   #else
+<   ii = istart[0];
+<   #endif  /* if (GEOM == SPHERICAL || GEOM==CYLINDRICAL) */
+< 
+<   {
+<     // Compute fluxes on the Cartesian part of the grid
+< 	  if (ii <= istop[0]) {
+<     	// interp coeffs in 0-direction
+<     	for (i=ii-NG; i<istop[0]+NG; i++) {
+<     		alpha[NG+i-ii] = alpha0[i];
+<     		beta [NG+i-ii] = beta0 [i];
+<     		Gamma[NG+i-ii] = Gamma0[i];
+<     		x    [NG+i-ii] = startx[0] + i*dx[0];
+<     	}
+< 
+<     	// fluxes in 0-direction
+<       for (j=istart[1]; j<istop[1]; j++) {  // No need to use JSLOOP here
+< 		    for (i=ii-NG;  i<istop[0]+NG; i++) {
+<   				VLOOP { pencil[vv][NG+i-ii] = NDP_ELEM_LINEAR(p,i,j,kk,vv); }
+<   				pencil[vv++][NG+i-ii] = NDP_ELEM_LINEAR(sim_eos,i,j,kk,PRESS);
+<   				pencil[vv  ][NG+i-ii] = NDP_ELEM_LINEAR(sim_eos,i,j,kk,GAMMA);
+<   		  }
+< 
+<     		interp(pencil, pleft, pright, alpha, beta, Gamma, x, istop[0]-ii);  // interpolate istop[0]-ii+1 4-zone pencils
+< 
+<     		#if (DO_RADIATION)
+<     		#endif
+< 
+<     		for (i=ii; i<=istop[0]; i++) {
+<                     ILOOP {
+<                       pl[vv] = pright[vv][NG+i-1-ii];
+<                       pr[vv] = pleft [vv][NG+i-ii];
+<                     }
+< 
+<     	            isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+< 
+<                     if (isshock) {
+<                       ND_ELEM_LINEAR(sim_shock_flag,i,j,0) = 0;
+<                       jm = j*DJS(i)/DJS(i-1);
+<                       ND_ELEM_LINEAR(sim_shock_flag,i-1,jm,0) = 0;
+<                       jm = j*DJS(i)/DJS(i-2);
+<                       ND_ELEM_LINEAR(sim_shock_flag,i-2,jm,0) = 0;
+<                     }
+< 
+<                     min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 
+<     			#if (DO_RADIATION)
+<     		        // get the opacity of zone i-1
+<     		        opac_emis(NDP_ELEM_LINEAR(p,i-1,j,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i-1,j,kk,TEMP), NDP_ELEM_LINEAR(p,i-1,j,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<     		        GLOOP { chil[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<     			// get the optical depth of zone i
+<     			opac_emis(NDP_ELEM_LINEAR(p,i,j,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,kk,TEMP), NDP_ELEM_LINEAR(p,i,j,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<     			GLOOP {
+<     				chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+<     				chil[g] *= 0.5;
+<     				chil[g] += 0.5*chir[g];
+<     			}
+<     			// get the fluxes of radiation variables at this interface
+<     			rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+<     			// copy chir into chil for the next interface
+<     			//memcpy(chil, chir, ngroups*sizeof(double));
+< 
+<     			// update estimate for next time step, if necessary
+<                         min_dt = MIN(min_dt,dx[0]/fabs(ss));
+<     			#endif
+<     		}  /* end for i */
+<     	}  /* end for j */
+<     }  /* end if ii */
+< 
+<   	// fluxes in 1-direction
+<   	for (i=istart[0]; i<istop[0]; i++) {
+< 
+<     	jlev = 0;
+<     	s = DJS(i);
+<     	while (s >>= 1) jlev++;
+< 
+<       jstart = JS(i,istart[1]);
+<       jstop  = JS(i,istop[1]);
+<       for (j=jstart-NG; j<jstop+NG; j++) {
+<     		alpha[NG+j-jstart] = alpha1s[jlev][j];
+<     		beta [NG+j-jstart] = beta1s [jlev][j];
+<     		Gamma[NG+j-jstart] = Gamma1s[jlev][j];
+<     		x    [NG+j-jstart] = startx[1] + j*DJS(i)*dx[1];
+< 
+<   			VLOOP { pencil[vv][NG+j-jstart] = NDP_ELEM_LINEAR(p,i,j,kk,vv); }
+<   			pencil[vv++][NG+j-jstart] = NDP_ELEM_LINEAR(sim_eos,i,j,kk,PRESS);
+<   			pencil[vv  ][NG+j-jstart] = NDP_ELEM_LINEAR(sim_eos,i,j,kk,GAMMA);
+<   		}
+< 
+<   		interp(pencil, pleft, pright, alpha, beta, Gamma, x, jstop-jstart);  // interpolate (jstop-jstart) 4-zone pencils
+< 
+<   		#if (DO_RADIATION)
+<   		#endif
+< 
+<       for (j=jstart; j<=jstop; j++) {
+< 
+<         ILOOP {
+<           pl[vv] = pright[vv][NG+j-jstart-1];
+<           pr[vv] = pleft [vv][NG+j-jstart  ];
+<         }
+---
+>   //GPU_PRAGMA(omp target ){
+> 	GPU_PRAGMA(omp target teams distribute parallel for private(pencil,pleft,pright) shared(sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1) reduction(min:min_dt))
+>   for(int II=0;II<cell_count_all;II++) {
+>     double flux[NSIZE],vriemann[NSIZE];
+>     double pl[NSIZE], pr[NSIZE],pp[NSIZE];
+>     double alpha[2*NG],beta[2*NG],Gamma[2*NG],x[2*NG];
+>     int jstart,jstop;
+>     double ss,vol_sum,vol_frac;
+>     int jm,jp,njp,isshock,jlev,s;
+>     GET_IJK_FROM_I(II,i,j,k);
+>     if(i<istart[0]||i>istop[0]||j<JS(i,istart[1])||j>=JS(i,istop[1])){/*do nothing*/;}
+>     else{
+>       for (ii=i-NG; ii<i+NG; ii++) {
+>         alpha[NG+ii-i] = alpha0[ii];
+>         beta [NG+ii-i] = beta0 [ii];
+>         Gamma[NG+ii-i] = Gamma0[ii];
+>         x    [NG+ii-i] = startx[0] + ii*dx[0];
+967,968c688,689
+<         if (transverse_shock(i,j,0,1)) {
+<           riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+---
+>         if (DJS(ii) < DJS(i)) {
+>           restrict0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,p,sim_eos,geom,i,j,ii,pp);
+970c691
+<     			riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+---
+>           prolongate0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,p,sim_eos,i,j,ii,pp);
+971a693,713
+>         ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+>       }
+>       interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);
+>       ILOOP {
+>         pl[vv] = pright[vv][NG-1];
+>         pr[vv] = pleft [vv][NG+0];
+>       }
+>       isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, flux, &ss, vriemann);
+>       HLOOP{NDP_ELEM_LINEAR_F(sim_fdir0,0,i,j,k,vv) = flux[vv];}
+>       SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k,dd) = vriemann[dd];}
+> 
+>       if (isshock) {
+>         ND_ELEM_LINEAR(sim_shock_flag,i,j,0) = 0;
+>         jm = j*DJS(i)/DJS(i-1);
+>         ND_ELEM_LINEAR(sim_shock_flag,i-1,jm,0) = 0;
+>         jm = j*DJS(i)/DJS(i-2);
+>         ND_ELEM_LINEAR(sim_shock_flag,i-2,jm,0) = 0;
+>       }
+>       min_dt = MIN(min_dt,dx[0]/fabs(ss));
+>     }
+>   //} // end for II
+973,974c715,734
+<   			// update estimate for next time step, if necessary
+<         min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+---
+>   //// fluxes in 1-direction
+>   //for(int II=0;II<cell_count_all;II++) {
+>   //  GET_IJK_FROM_I(II,i,j,k);
+>     jstart = JS(i,istart[1]);
+>     jstop  = JS(i,istop[1]);
+>     if(i<istart[0]||i>=istop[0]||j<jstart||j>jstop){/*do nothing*/;}
+>     else{
+>       jlev = 0;
+>       s = DJS(i);
+>       while (s >>= 1) jlev++;
+>       for (int jtemp=j-NG; jtemp<j+NG; jtemp++) {
+>         alpha[NG+jtemp-j] = alpha1s[jlev][jtemp];
+>         beta [NG+jtemp-j] = beta1s [jlev][jtemp];
+>         Gamma[NG+jtemp-j] = Gamma1s[jlev][jtemp];
+>         x    [NG+jtemp-j] = startx[1] + jtemp*DJS(i)*dx[1];
+>         VLOOP { pencil[vv][NG+jtemp-j] = NDP_ELEM_LINEAR(p,i,jtemp,kk,vv); }
+>         pencil[vv++][NG+jtemp-j] = NDP_ELEM_LINEAR(sim_eos,i,jtemp,kk,PRESS);
+>         pencil[vv  ][NG+jtemp-j] = NDP_ELEM_LINEAR(sim_eos,i,jtemp,kk,GAMMA);
+>       }
+>       interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate (jstop-jstart) 4-zone pencils
+976,997c736,748
+<   			#if (DO_RADIATION)
+<   		        // get the opacity of zone j-1
+<   		        opac_emis(NDP_ELEM_LINEAR(p,i,j-1,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i,j-1,kk,TEMP), NDP_ELEM_LINEAR(p,i,j-1,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<   		        GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<   			// get the optical depth of zone i
+<   			opac_emis(NDP_ELEM_LINEAR(p,i,j,kk,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,kk,TEMP), NDP_ELEM_LINEAR(p,i,j,kk,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<   			GLOOP {
+<   				chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+<   				chil[g] *= 0.5;
+<   				chil[g] += 0.5*chir[g];
+<   			}
+<   			// get the fluxes of radiation variables at this interface
+<   			rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), 1, chil, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k)[1], &ND_ELEM_LINEAR(geom,i,j,k), &ss, DJS(i));
+< 
+<   			// copy chir into chil for the next interface
+<   			//memcpy(chil, chir, ngroups*sizeof(double));
+< 
+<   			// update estimate for next time step, if necessary
+<         min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+<   			#endif
+<   		}  /* end for j */
+<   	}  /* end for i */
+---
+>       ILOOP {
+>         pl[vv] = pright[vv][NG-1];
+>         pr[vv] = pleft [vv][NG+0];
+>       }
+>       if (transverse_shock(ijk_to_I,sim_shock_flag,dj,dk,i,j,0,1)) {
+>         riemann_flux_HLLE(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, flux, &ss, vriemann);
+>         HLOOP{NDP_ELEM_LINEAR_F(sim_fdir1,1,i,j,k,vv) = flux[vv];}
+>         SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k,dd) = vriemann[dd];}
+>       } else {
+>         isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, flux, &ss, vriemann);
+>         HLOOP{NDP_ELEM_LINEAR_F(sim_fdir1,1,i,j,k,vv) = flux[vv];}
+>         SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k,dd) = vriemann[dd];}
+>       }
+998a750,752
+>       // update estimate for next time step, if necessary
+>       min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+>     }
+1000,1003c754,756
+< 
+<     TIMER_STOP;
+< 
+< 	return;
+---
+>   //}
+>   TIMER_STOP;
+>   return;
+1008,1019c761,772
+< static double* pl    = NULL;
+< static double* pr    = NULL;
+< static double* pp    = NULL;
+< static double* alpha = NULL;
+< static double* beta  = NULL;
+< static double* Gamma = NULL;
+< static double* x     = NULL;
+< static double* kappa = NULL;
+< static double* sc    = NULL;
+< static double* delta = NULL;
+< static double* chil  = NULL;
+< static double* chir  = NULL;
+---
+> //static double* pl    = NULL;
+> //static double* pr    = NULL;
+> //static double* pp    = NULL;
+> //static double* alpha = NULL;
+> //static double* beta  = NULL;
+> //static double* Gamma = NULL;
+> //static double* x     = NULL;
+> //static double* kappa = NULL;
+> //static double* sc    = NULL;
+> //static double* delta = NULL;
+> //static double* chil  = NULL;
+> //static double* chir  = NULL;
+1023c776,779
+< void kslopes0(double ** p, double ** e, int ip, int jp, int kp, int ii, int jj, double *pp)
+---
+> void kslopes0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+>               int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+>               int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+>               double ** p, double ** e, int ip, int jp, int kp, int ii, int jj, double *pp)
+1025c781,784
+< void kslopes0(double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int ii, int jj, double *pp)
+---
+> void kslopes0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+>               int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+>               int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+>               double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int ii, int jj, double *pp)
+1075c834,837
+< void kslopes1(double ** p, double ** e, int ip, int jp, int kp, int jj, double *pp)
+---
+> void kslopes1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double ** p, double ** e, int ip, int jp, int kp, int jj, double *pp)
+1077c839,842
+< void kslopes1(double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int jj, double *pp)
+---
+> void kslopes1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int jj, double *pp)
+1133c898,901
+< void prolongate0(double ** p, double ** e, int ip, int jp, int kp, int ii,
+---
+> void prolongate0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double ** p, double ** e, int ip, int jp, int kp, int ii,
+1136c904,907
+< void prolongate0(double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int ii,
+---
+> void prolongate0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int ii,
+1142c913
+<   double pp0[ninterp],pp1[ninterp],pp2[ninterp];
+---
+>   double pp0[NSIZE],pp1[NSIZE],pp2[NSIZE];
+1154,1156c925,927
+<   kslopes0(p,e,ip,jp,kp,ii,jj-1,pp0);
+<   kslopes0(p,e,ip,jp,kp,ii,jj  ,pp1);
+<   kslopes0(p,e,ip,jp,kp,ii,jj+1,pp2);
+---
+>   kslopes0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,e,ip,jp,kp,ii,jj-1,pp0);
+>   kslopes0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,e,ip,jp,kp,ii,jj  ,pp1);
+>   kslopes0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,e,ip,jp,kp,ii,jj+1,pp2);
+1203c974,977
+< void prolongate1(double ** p, double ** e, int ip, int jp, int kp, int jj,
+---
+> void prolongate1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double ** p, double ** e, int ip, int jp, int kp, int jj,
+1206c980,983
+< void prolongate1(double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int jj,
+---
+> void prolongate1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double NDP_PTR p, double NDP_PTR e, int ip, int jp, int kp, int jj,
+1224c1001
+<     kslopes1(p,e,ip,jp,kp,jj,pp);
+---
+>     kslopes1(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,e,ip,jp,kp,jj,pp);
+1228c1005,1008
+< void restrict0(double ** p, double ** e, zone_geom * g, int i, int j, int k, int ii,
+---
+> void restrict0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double ** p, double ** e, zone_geom * g, int i, int j, int k, int ii,
+1231c1011,1014
+< void restrict0(double NDP_PTR p, double NDP_PTR e, zone_geom ND_PTR g, int i, int j, int k, int ii,
+---
+> void restrict0(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double NDP_PTR p, double NDP_PTR e, zone_geom ND_PTR g, int i, int j, int k, int ii,
+1264c1047,1050
+< void restrict1(double ** p, double ** e, zone_geom * g, int i, int j, int k, int jj,
+---
+> void restrict1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double ** p, double ** e, zone_geom * g, int i, int j, int k, int jj,
+1267c1053,1056
+< void restrict1(double NDP_PTR p, double NDP_PTR e, zone_geom ND_PTR g, int i, int j, int k, int jj,
+---
+> void restrict1(int ND_PTR ijk_to_I,int nvars,int nhydro,int ninterp,
+> 		              int *dj,double **alpha1s,double **beta1s,double **Gamma1s,
+> 			                    int **dk,double **alpha2s,double **beta2s,double **Gamma2s,
+> 					    double NDP_PTR p, double NDP_PTR e, zone_geom ND_PTR g, int i, int j, int k, int jj,
+1308,1325c1097,1107
+<       pl     = malloc_rank1(ninterp,      sizeof *pl   );
+<       pr     = malloc_rank1(ninterp,      sizeof *pr   );
+<       pp     = malloc_rank1(ninterp,      sizeof *pp   );
+<       alpha  = malloc_rank1(max_grid_dim, sizeof *alpha);
+<       //alpha += NG;
+<       beta   = malloc_rank1(max_grid_dim, sizeof *beta );
+<       //beta  += NG;
+<       Gamma  = malloc_rank1(max_grid_dim, sizeof *Gamma);
+<       //Gamma += NG;
+<       x      = malloc_rank1(max_grid_dim, sizeof *x    );
+<       //x     += NG;
+<       #if (DO_RADIATION==TRUE)
+<       kappa  = malloc_rank1(ngroups,      sizeof *kappa);
+<       sc     = malloc_rank1(ngroups,      sizeof *sc   );
+<       delta  = malloc_rank1(ngroups,      sizeof *delta);
+<       chil   = malloc_rank1(ngroups,      sizeof *chil );
+<       chir   = malloc_rank1(ngroups,      sizeof *chir );
+<       #endif
+---
+>       //pl     = malloc_rank1(ninterp,      sizeof *pl   );
+>       //pr     = malloc_rank1(ninterp,      sizeof *pr   );
+>       //pp     = malloc_rank1(ninterp,      sizeof *pp   );
+>       //alpha  = malloc_rank1(max_grid_dim, sizeof *alpha);
+>       ////alpha += NG;
+>       //beta   = malloc_rank1(max_grid_dim, sizeof *beta );
+>       ////beta  += NG;
+>       //Gamma  = malloc_rank1(max_grid_dim, sizeof *Gamma);
+>       ////Gamma += NG;
+>       //x      = malloc_rank1(max_grid_dim, sizeof *x    );
+>       ////x     += NG;
+1330,1357c1112,1167
+<   #if (GEOM==SPHERICAL || GEOM==CYLINDRICAL)
+<   if (istop_jrefine > 0 && istart[0] < istop_jrefine) {
+<     // Compute fluxes in 0-direction on the dendritic part of the grid
+<     for (i=istart[0]; i<=MIN(istop[0], istop_jrefine-1); i++) {
+<       JSLOOP(i,j) {
+<         KSLOOP(i,j,k) {
+<           for (ii=i-NG; ii<i+NG; ii++) {
+<             alpha[NG+ii-i] = alpha0[ii];
+<             beta [NG+ii-i] = beta0 [ii];
+<             Gamma[NG+ii-i] = Gamma0[ii];
+<             x    [NG+ii-i] = startx[0] + ii*dx[0];
+< 
+<             if (DJS(ii) < DJS(i)) {
+<               restrict0(p,sim_eos,geom,i,j,k,ii,pp);
+<             } else {
+<               prolongate0(p,sim_eos,i,j,k,ii,pp);
+<             }
+<             ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+<           }
+< 
+<           interp(pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+< 
+<           ILOOP {
+<             pl[vv] = pright[vv][NG-1];
+<             pr[vv] = pleft [vv][NG+0];
+<           }
+< 
+<           isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+---
+> //  for(int II=0;II<cell_count_all;II++){
+> //    double pl[NSIZE],pr[NSIZE],pp[NSIZE];
+> //    double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
+> //    double flux[NSIZE],vriemann[NSIZE];
+> //    GET_IJK_FROM_I(II,i,j,k);
+> //    if(i<istart[0]||i>istop[0]||j<JS(i,istart[1])||j>=JS(i,istop[1])||k<KS(i,j,istart[2])||k>=KS(i,j,istop[2])){/*do nothing*/}
+> //    else{
+> //        for (ii=i-NG; ii<i+NG; ii++) {
+> //          alpha[NG+ii-i] = alpha0[ii];
+> //          beta [NG+ii-i] = beta0 [ii];
+> //          Gamma[NG+ii-i] = Gamma0[ii];
+> //          x    [NG+ii-i] = startx[0] + ii*dx[0];
+> //
+> //          if (DJS(ii) < DJS(i)) {
+> //            restrict0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,geom,i,j,k,ii,pp);
+> //          } else {
+> //            prolongate0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,i,j,k,ii,pp);
+> //          }
+> //          ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+> //        }
+> //
+> //        interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+> //
+> //        ILOOP {
+> //          pl[vv] = pright[vv][NG-1];
+> //          pr[vv] = pleft [vv][NG+0];
+> //        }
+> //    }
+> //  }
+> //  GPU_PRAGMA(omp target ){
+> //  for(int II=0;II<cell_count_all;II++){
+> //	  int Itemp;
+> //	  GET_IJK_FROM_I(II,i,j,k)
+> //	  Itemp = ND_ELEM(ijk_to_I,i,j,k);
+> //	  if(Itemp!=II){printf("error! %d %d %d %d\n",II,i,j,k);}
+> //	  for(int l=0;l<3;l++){
+> //	    printf("%d %d %d %d %.17g\n",i,j,k,l,ND_ELEM_LINEAR(geom,i,j,k).scale[3][l]);
+> //	  }
+> //  }
+> //  }
+>   GPU_PRAGMA(omp target teams distribute parallel for shared(ijk_to_I,I_to_ijk,sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1,sim_fdir2,sim_vedgedir2) reduction(min:min_dt))
+>   for(int II=0;II<cell_count_all;II++){
+>     double pl[NSIZE],pr[NSIZE],pp[NSIZE];
+>     double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
+>     double flux[NSIZE],vriemann[NSIZE];
+>     double pencil[NSIZE][2*NG];
+>     double pleft [NSIZE][2*NG];
+>     double pright[NSIZE][2*NG];
+>     GET_IJK_FROM_I(II,i,j,k);
+>     if(i<istart[0]||i>istop[0]||j<JS(i,istart[1])||j>=JS(i,istop[1])||k<KS(i,j,istart[2])||k>=KS(i,j,istop[2])){/*do nothing*/}
+>     else{
+>         for (ii=i-NG; ii<i+NG; ii++) {
+>           alpha[NG+ii-i] = alpha0[ii];
+>           beta [NG+ii-i] = beta0 [ii];
+>           Gamma[NG+ii-i] = Gamma0[ii];
+>           x    [NG+ii-i] = startx[0] + ii*dx[0];
+1359,1366c1169,1172
+<           if (isshock) {
+<             ND_ELEM_LINEAR(sim_shock_flag,i,j,k) = 0;
+<             jm = j*DJS(i)/DJS(i-1);
+<             km = k*DKS(i,j)/DKS(i-1,jm);
+<             ND_ELEM_LINEAR(sim_shock_flag,i-1,jm,km) = 0;
+<             jm = j*DJS(i)/DJS(i-2);
+<             km = k*DKS(i,j)/DKS(i-2,jm);
+<             ND_ELEM_LINEAR(sim_shock_flag,i-2,jm,km) = 0;
+---
+>           if (DJS(ii) < DJS(i)) {
+>             restrict0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,geom,i,j,k,ii,pp);
+>           } else {
+>             prolongate0(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,i,j,k,ii,pp);
+1368,1382c1174
+< 
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 
+<           #if (DO_RADIATION)
+<           // get the opacity of zone
+<           opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<           GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+< 
+<           // get the fluxes of radiation variables at this interface
+<           rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,dx[0]/fabs(ss));
+<           #endif
+---
+>           ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+1384,1408d1175
+<       }
+<     }
+<   }
+<   i0 = MAX(istart[0],MIN(istop[0],istop_jrefine-1)+1);
+<   if (istop_jrefine <= 0) i0 = istart[0];
+< 
+<   if (i0 < istop_krefine) {
+<     // No longer refining j with increasing i (for any i used here), so can reverse i and j loops
+<     for (j=istart[1]; j<istop[1]; j++) {  // No need for JS or JSLOOP here
+<       for (i=i0; i<=MIN(istop[0], istop_krefine-1); i++) {
+<         KSLOOP(i,j,k) {
+<           for (ii=i-NG; ii<i+NG; ii++) {
+<             alpha[NG+ii-i] = alpha0[ii];
+<             beta [NG+ii-i] = beta0 [ii];
+<             Gamma[NG+ii-i] = Gamma0[ii];
+<             x    [NG+ii-i] = startx[0] + ii*dx[0];
+< 
+<             if (DKS(ii,j) < DKS(i,j)) {
+<               // Note that it is only possible to have DKS(ii,j) < DKS(i,j) if ii > i
+<               restrict0(p,sim_eos,geom,i,j,k,ii,pp);
+<             } else {
+<               prolongate0(p,sim_eos,i,j,k,ii,pp);
+<             }
+<             ILOOP { pencil[vv][NG+ii-i] = pp[vv]; }
+<           }
+1410c1177
+<           interp(pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+---
+>         interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+1412,1440c1179,1181
+<           ILOOP {
+<             pl[vv] = pright[vv][NG-1];
+<             pr[vv] = pleft [vv][NG+0];
+<           }
+< 
+<           isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+< 
+<           if (isshock) {
+<             ND_ELEM_LINEAR(sim_shock_flag,i  ,j,k) = 0;
+<             km = k*DKS(i,j)/DKS(i-1,j);
+<             ND_ELEM_LINEAR(sim_shock_flag,i-1,j,km) = 0;
+<             km = k*DKS(i,j)/DKS(i-2,j);
+<             ND_ELEM_LINEAR(sim_shock_flag,i-2,j,km) = 0;
+<           }
+< 
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 
+<           #if (DO_RADIATION)
+<           // get the opacity of zone
+<           opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<           GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+< 
+<           // get the fluxes of radiation variables at this interface
+<           rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,dx[0]/fabs(ss));
+<           #endif
+---
+>         ILOOP {
+>           pl[vv] = pright[vv][NG-1];
+>           pr[vv] = pleft [vv][NG+0];
+1442,1449d1182
+<       }
+<     }
+<   }
+<   ii = MAX(istart[0],MIN(istop[0],istop_krefine-1)+1);
+<   if (istop_krefine <= 0) ii = istart[0];
+<   #else
+<   ii = istart[0];
+<   #endif  /* if (GEOM==SPHERICAL || GEOM==CYLINDRICAL) */
+1451,1511c1184,1196
+<   // Interp coeffs in 0-direction
+<   {
+<     // If there are extra zones to be done in the Cartesian region, do them now...
+<     if (ii <= istop[0]) {
+<       for (i=ii-NG; i<istop[0]+NG; i++) {
+<         alpha[NG+i-ii] = alpha0[i];
+<         beta [NG+i-ii] = beta0 [i];
+<         Gamma[NG+i-ii] = Gamma0[i];
+<         x    [NG+i-ii] = startx[0] + i*dx[0];
+<       }
+< 
+<       // Fluxes in 0-direction
+<       // No longer refining in j or k with increasing i (for any i used here), so no subloops, hence can change
+<       // loop order.  Still refining/coarsening in k with j, so must continue to do that
+<       for (j=istart[1]; j<istop[1]; j++) {  // No need for JS or JSLOOP here
+<         KSLOOP(ii,j,k) {  // Still need KSLOOP here
+<           for (i=ii-NG; i<istop[0]+NG; i++) {
+<             VLOOP { pencil[vv][NG+i-ii] = NDP_ELEM_LINEAR(p,i,j,k,vv); }
+<             pencil[vv++][NG+i-ii] = NDP_ELEM_LINEAR(sim_eos,i,j,k,PRESS);
+<             pencil[vv  ][NG+i-ii] = NDP_ELEM_LINEAR(sim_eos,i,j,k,GAMMA);
+<           }
+< 
+<           interp(pencil, pleft, pright, alpha, beta, Gamma, x, istop[0]-ii);  // interpolate istop[0]-ii+1 4-zone pencils
+< 
+<           #if (DO_RADIATION)
+<           #endif
+< 
+<           for (i=ii; i<=istop[0]; i++) {
+<             ILOOP {
+<               pl[vv] = pright[vv][NG+i-1-ii];
+<               pr[vv] = pleft [vv][NG+i-ii];
+<             }
+< 
+<             isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+< 
+<             if (isshock) {
+<               ND_ELEM_LINEAR(sim_shock_flag,i  ,j,k) = 0;
+<               ND_ELEM_LINEAR(sim_shock_flag,i-1,j,k) = 0;
+<               ND_ELEM_LINEAR(sim_shock_flag,i-2,j,k) = 0;
+<             }
+< 
+<             // Update estimate for next time step, if necessary
+<             min_dt = MIN(min_dt,dx[0]/fabs(ss));
+< 
+<             #if (DO_RADIATION)
+<             // Get the opacity of zone i-1
+<             opac_emis(NDP_ELEM_LINEAR(p,i-1,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i-1,j,k,TEMP), NDP_ELEM_LINEAR(p,i-1,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<             GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<             // Get the opacity of zone i
+<             opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<             GLOOP {
+<               chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+<               chil[g] *= 0.5;
+<               chil[g] += 0.5*chir[g];
+<             }
+< 
+<             // Get the fluxes of radiation variables at this interface
+<             rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), 0, chil, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k)[0], &ND_ELEM_LINEAR(geom,i,j,k), &ss, 1);
+< 
+<             // Copy chir into chil for the next interface
+<             //memcpy(chil, chir, ngroups*sizeof(double));
+---
+>         //isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, ND_ELEM_LINEAR_F(sim_fdir0,0,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k));
+>         isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 0, flux, &ss, vriemann);
+>         HLOOP{NDP_ELEM_LINEAR_F(sim_fdir0,0,i,j,k,vv) = flux[vv];}
+>         SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir0,0,i,j,k,dd) = vriemann[dd];}
+>         if (isshock) {
+>           ND_ELEM_LINEAR(sim_shock_flag,i,j,k) = 0;
+>           jm = j*DJS(i)/DJS(i-1);
+>           km = k*DKS(i,j)/DKS(i-1,jm);
+>           ND_ELEM_LINEAR(sim_shock_flag,i-1,jm,km) = 0;
+>           jm = j*DJS(i)/DJS(i-2);
+>           km = k*DKS(i,j)/DKS(i-2,jm);
+>           ND_ELEM_LINEAR(sim_shock_flag,i-2,jm,km) = 0;
+>         }
+1513,1537c1198,1208
+<             // Update estimate for next time step, if necessary
+<             min_dt = MIN(min_dt,dx[0]/fabs(ss));
+<             #endif
+<           }
+<         } // k-loop
+<       } // j-loop
+<     } // if (ii <= istop[0])
+< 
+< 
+<     // Fluxes in 1-direction
+<     for (i=istart[0]; i<istop[0]; i++) {
+< 
+<     	jlev = 0;
+<     	s = DJS(i);
+<     	while (s >>= 1) jlev++;
+< 
+<       // Do the refined dendritic part
+<       #if (GEOM == SPHERICAL || GEOM==CYLINDRICAL)
+<       if (jstop_krefine[i] > 0 && JS(i,istart[1]) < JS(i,jstop_krefine[i]*DJS(i))) {
+<         // j loop is over active zones; jj loop is over the (usually 4-zone) pencil
+<         jstart = JS(i,istart[1]);
+<         jstop  = MIN(JS(i,istop[1]), JS(i,jstop_krefine[i]*DJS(i)));
+<         // // TEST
+<         for (j=jstart; j<=jstop; j++) {
+<           KSLOOP(i,j,k) {
+---
+>         // update estimate for next time step, if necessary
+>         min_dt = MIN(min_dt,dx[0]/fabs(ss));
+>     }
+>     if(i<istart[0]||i>=istop[0]||j<JS(i,istart[1])||j>JS(i,istop[1])||k<KS(i,j,istart[2])||k>=KS(i,j,istop[2])){/*do nothing*/}
+>     else{
+>           jlev = 0;
+>           s = DJS(i);
+>           while (s >>= 1) jlev++;
+>           nkp = MAX(1,DKS(i,j)/MIN(DKS(i,j),DKS(i,j-1)));
+>           kp = k*MAX(1,DKS(i,j)/DKS(i,j-1));
+>           for (kk=kp; kk<kp+nkp; kk++) {
+1540,1546c1211,1218
+<           		alpha[NG+jj-j] = alpha1s[jlev][jj];
+<           		beta [NG+jj-j] = beta1s [jlev][jj];
+<           		Gamma[NG+jj-j] = Gamma1s[jlev][jj];
+<           		x    [NG+jj-j] = startx[1] + jj*DJS(i)*dx[1];
+< 
+<               if (DKS(i,jj) < DKS(i,j)) {
+<                 restrict1(p,sim_eos,geom,i,j,k,jj,pp);
+---
+>               alpha[NG+jj-j] = alpha1s[jlev][jj];
+>               beta [NG+jj-j] = beta1s [jlev][jj];
+>               Gamma[NG+jj-j] = Gamma1s[jlev][jj];
+>               x    [NG+jj-j] = startx[1] + jj*DJS(i)*dx[1];
+> 
+>               //if (DKS(i,jj) < DKS(i,j)) {
+>               if (DKS(i,jj) < MIN(DKS(i,j),DKS(i,j-1))) {//test required: should do the same thing as the line commented above
+>                 restrict1(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,geom,i,j,kk,jj,pp);
+1548c1220
+<                 prolongate1(p,sim_eos,i,j,k,jj,pp);
+---
+>                 prolongate1(ijk_to_I,nvars,nhydro,ninterp,dj,alpha1s,beta1s,Gamma1s,dk,alpha2s,beta2s,Gamma2s,p,sim_eos,i,j,kk,jj,pp);
+1553c1225
+<             interp(pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+---
+>             interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+1560,1621c1232,1236
+<             if (transverse_shock(i,j,k,1)) {
+<               riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+<             } else {
+<               riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+<             }
+< 
+<             // update estimate for next time step, if necessary
+<             min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+< 
+<             #if (DO_RADIATION)
+<             // get the opacity of zone
+<             opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<             GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+< 
+<             // get the fluxes of radiation variables at this interface
+<             rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), 1, chil, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k)[1], &ND_ELEM_LINEAR(geom,i,j,k), &ss, DJS(i));
+< 
+<             // update estimate for next time step, if necessary
+<             min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+<             #endif
+<           }  // end KSLOOP
+<         }  // end for j
+<       }  // end if
+<       jj = MAX(JS(i,istart[1]),MIN(JS(i,istop[1])+1,JS(i,jstop_krefine[i]*DJS(i))));
+<       if (jstop_krefine[i] <= 0) jj = JS(i,istart[1]);
+<       #else
+<       jj = istart[1];
+<       #endif /* if (GEOM == SPHERICAL || GEOM==CYLINDRICAL) */
+< 
+<       // Do the Cartesian part
+<       if (jj <= JS(i,istop[1]) && jj >= JS(i,jstop_krefine[i]*DJS(i)) && jj < JS(i,jstart_kcoarsen[i]*DJS(i))) {
+<         // since we're in the full-k part of the grid, we can flip the k and j loops here
+<         jstart = jj;
+<         jstop  = MIN(JS(i,istop[1]), JS(i,jstart_kcoarsen[i]*DJS(i)));
+<         kstart = KS(i,jstart,istart[2]);
+<         kstop  = KS(i,jstart,istop[2]);
+<         // // TEST
+<         for (k=kstart; k<kstop; k++) {
+<           for (j=jstart-NG; j<jstop+NG; j++) {
+<         		alpha[NG+j-jstart] = alpha1s[jlev][j];
+<         		beta [NG+j-jstart] = beta1s [jlev][j];
+<         		Gamma[NG+j-jstart] = Gamma1s[jlev][j];
+<         		x    [NG+j-jstart] = startx[1] + j*DJS(i)*dx[1];
+< 
+<             VLOOP { pencil[vv][NG+j-jstart] = NDP_ELEM_LINEAR(p,i,j,k,vv); }
+<             pencil[vv++][NG+j-jstart] = NDP_ELEM_LINEAR(sim_eos,i,j,k,PRESS);
+<             pencil[vv  ][NG+j-jstart] = NDP_ELEM_LINEAR(sim_eos,i,j,k,GAMMA);
+<           }
+< 
+<           interp(pencil, pleft, pright, alpha, beta, Gamma, x, jstop-jstart);  // interpolate jstop-jstart+1 4-zone pencils
+< 
+<           #if (DO_RADIATION)
+<           #endif
+< 
+<           for (j=jstart; j<=jstop; j++) {
+<             ILOOP {
+<               pl[vv] = pright[vv][NG+j-jstart-1];
+<               pr[vv] = pleft [vv][NG+j-jstart];
+<             }
+< 
+<             if (transverse_shock(i,j,k,1)) {
+<               riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+---
+>             if (transverse_shock(ijk_to_I,sim_shock_flag,dj,dk,i,j,k,1)) {
+>               //riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+>               riemann_flux_HLLE(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, flux, &ss, vriemann);
+>               HLOOP{NDP_ELEM_LINEAR_F(sim_fdir1,1,i,j,kk,vv) = flux[vv];}
+>               SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,kk,dd) = vriemann[dd];}
+1623c1238,1241
+<               riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+---
+>               //riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k));
+>               isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, flux, &ss, vriemann);
+>               HLOOP{NDP_ELEM_LINEAR_F(sim_fdir1,1,i,j,kk,vv) = flux[vv];}
+>               SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,kk,dd) = vriemann[dd];}
+1627a1246
+> 	  }
+1629,1731c1248,1261
+<             #if (DO_RADIATION)
+<             // get the opacity of zone j-1
+<             opac_emis(NDP_ELEM_LINEAR(p,i,j-1,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j-1,k,TEMP), NDP_ELEM_LINEAR(p,i,j-1,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<             GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<             // get the opacity of zone i
+<             opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<             GLOOP {
+<               chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+<               chil[g] *= 0.5;
+<               chil[g] += 0.5*chir[g];
+<             }
+< 
+<             // get the fluxes of radiation variables at this interface
+<             rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k), 1, chil, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k)[1], &ND_ELEM_LINEAR(geom,i,j,k), &ss, DJS(i));
+< 
+<             // copy chir into chil for the next interface
+<             //memcpy(chil, chir, ngroups*sizeof(double));
+< 
+<             // update estimate for next time step, if necessary
+<             min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+<             #endif
+<           }  // end for j
+<         }  // end for k
+<         jj = MAX(JS(i,istart[1]),MIN(JS(i,istop[1]),JS(i,jstart_kcoarsen[i]*DJS(i)))+1);
+<       }  // end if (jj < jstart_kcoarsen[i])
+< 
+<       // do the coarsened dendritic part
+<       #if (GEOM == SPHERICAL || GEOM==CYLINDRICAL)
+<       if (jstart_kcoarsen[i]*DJS(i) < n2 && istop[1] > jstart_kcoarsen[i]*DJS(i)) {
+<         jstart = jj;
+<         jstop  = JS(i,istop[1]);
+<         // // TEST
+<         for (j=jstart; j<=jstop; j++) {
+<           KSLOOP(i,j,k) {
+<             /* Be very careful here!  If at a coarsening boundary, do not compute the flux
+<              * at the lower boundary, but instead, compute the fluxes at both upper boundaries
+<              * of the zones below, then add the results to this zone's lower boundary.
+<              * Otherwise, compute the lower flux, then add it to the lower zone's upper flux.
+<              * When at a coarsening boundary, nkp is 2; otherwise, it's 1.
+<              */
+<             nkp = DKS(i,j)/MIN(DKS(i,j),DKS(i,j-1));
+<             kp = k*DKS(i,j)/DKS(i,j-1);
+<             for (kk=kp; kk<kp+nkp; kk++) {
+<               for (jj=j-NG; jj<j+NG; jj++) {
+<                 // get interpolation coefficients
+<             		alpha[NG+jj-j] = alpha1s[jlev][jj];
+<             		beta [NG+jj-j] = beta1s [jlev][jj];
+<             		Gamma[NG+jj-j] = Gamma1s[jlev][jj];
+<             		x    [NG+jj-j] = startx[1] + jj*DJS(i)*dx[1];
+< 
+<                 if (DKS(i,jj) < MIN(DKS(i,j),DKS(i,j-1))) {
+<                   restrict1(p,sim_eos,geom,i,j,kk,jj,pp);
+<                 } else {
+<                   prolongate1(p,sim_eos,i,j,kk,jj,pp);
+<                 }
+<                 ILOOP { pencil[vv][NG+jj-j] = pp[vv]; }
+<               }  // end for jj
+< 
+<               interp(pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate a single 4-zone pencil
+< 
+<               ILOOP {
+<                 pl[vv] = pright[vv][NG-1];
+<                 pr[vv] = pleft [vv][NG+0];
+<               }
+< 
+<               // AS:  SHOULD transverse_shock USE k OR kk??
+<               if (transverse_shock(i,j,k,1)) {
+<                 riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,kk), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,kk));
+<               } else {
+<                 riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 1, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,kk), &ss, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,kk));
+<               }
+< 
+<               // update estimate for next time step, if necessary
+<               min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+< 
+<               #if (DO_RADIATION)
+<               // get the opacity of zone
+<               opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<               GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+< 
+<               // get the fluxes of radiation variables at this interface
+<               rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir1,1,i,j,k)[kk], 1, chil, ND_ELEM_LINEAR_F(sim_vedgedir1,1,i,j,k)[kk][1], &ND_ELEM_LINEAR(geom,i,j,k), &ss, DJS(i));
+< 
+<               // update estimate for next time step, if necessary
+<               min_dt = MIN(min_dt,DJS(i)*dx[1]/fabs(ss));
+<               #endif
+<             }  // end for kk
+<           }  // end KSLOOP
+<         }  // end for j
+<       }  // end if (istart[1]...)
+<       #endif /* if (GEOM == SPHERICAL || GEOM==CYLINDRICAL) */
+<     }  // end for i
+< 
+<     // fluxes in 2-direction
+<     for (i=istart[0]; i<istop[0]; i++) {
+<       JSLOOP(i,j) {
+<         calc_interp_coeffs2(i,j,alpha,beta,Gamma,x);
+<         kstart = KS(i,j,istart[2]);
+<         kstop  = KS(i,j,istop[2]);
+<         for (k=kstart-NG; k<kstop+NG; k++) {
+<           VLOOP { pencil[vv][NG+k-kstart] = NDP_ELEM_LINEAR(p,i,j,k,vv); }
+<           pencil[vv++][NG+k-kstart] = NDP_ELEM_LINEAR(sim_eos,i,j,k,PRESS);
+<           pencil[vv  ][NG+k-kstart] = NDP_ELEM_LINEAR(sim_eos,i,j,k,GAMMA);
+---
+>     }  // end if
+>     if(i<istart[0]||i>=istop[0]||j<JS(i,istart[1])||j>=JS(i,istop[1])||k<KS(i,j,istart[2])||k>KS(i,j,istop[2])){/*do nothing*/}
+>     else{
+>         klev = 0;
+>         s = DKS(i,j);
+>         while (s >>= 1) klev++;
+>         for (int ktemp=k-NG; ktemp<k+NG; ktemp++) {
+>           x    [NG+ktemp-k] = startx[2] + ktemp*DKS(i,j)*dx[2];
+>           Gamma[NG+ktemp-k] = Gamma2s[klev][ktemp];
+>           beta [NG+ktemp-k] = beta2s [klev][ktemp];
+>           alpha[NG+ktemp-k] = alpha2s[klev][ktemp];
+>           VLOOP { pencil[vv][NG+ktemp-k] = NDP_ELEM_LINEAR(p,i,j,ktemp,vv); }
+>           pencil[vv++][NG+ktemp-k] = NDP_ELEM_LINEAR(sim_eos,i,j,ktemp,PRESS);
+>           pencil[vv  ][NG+ktemp-k] = NDP_ELEM_LINEAR(sim_eos,i,j,ktemp,GAMMA);
+1739c1269
+<         interp(pencil, pleft, pright, alpha, beta, Gamma, x, kstop-kstart);  // interpolate kstop-kstart+1 4-zone pencils
+---
+>         interp(ninterp,interp_order,pencil, pleft, pright, alpha, beta, Gamma, x, 0);  // interpolate kstop-kstart+1 4-zone pencils
+1741c1271
+< #if 1
+---
+>         #if 1
+1745,1746c1275,1276
+< if (abs(j-(JS(i,global_grid_dims[1])-1)) < 1) {
+<           int l,m;
+---
+>         if (abs(j-(JS(i,global_grid_dims[1])-1)) < 1) {
+>           //int l,m;
+1753c1283
+<           r = r_of_x(beta0[i]/Gamma0[i]);
+---
+>           r = r_of_x(rx_info,beta0[i]/Gamma0[i]);
+1755c1285
+<           th = th_of_x(beta1s[jlev][j]/Gamma1s[jlev][j]);
+---
+>           th = th_of_x(thx_info,beta1s[jlev][j]/Gamma1s[jlev][j]);
+1759,1760c1289,1290
+<           for (k=kstart-NG; k<kstop+NG; k++) {
+<             ph  = startx[2] + (k+0.5)*DKS(i,j)*dx[2];
+---
+>           for (int ktemp=k-NG; ktemp<k+NG; ktemp++) {
+>             ph  = startx[2] + (ktemp+0.5)*DKS(i,j)*dx[2];
+1778c1308
+<             for (l=0; l<3; l++) {
+---
+>             for (int l=0; l<3; l++) {
+1780,1781c1310,1311
+<               for (m=0; m<3; m++) {
+<                 v[l] += lam[l][m]*NDP_ELEM_LINEAR(p,i,j,k,U1+m)*ND_ELEM_LINEAR(geom,i,j,k).scale[0][m];
+---
+>               for (int m=0; m<3; m++) {
+>                 v[l] += lam[l][m]*NDP_ELEM_LINEAR(p,i,j,ktemp,U1+m)*ND_ELEM_LINEAR(geom,i,j,ktemp).scale[0][m];
+1786c1316
+<             ph  = startx[2] + k*DKS(i,j)*dx[2];
+---
+>             ph  = startx[2] + ktemp*DKS(i,j)*dx[2];
+1803,1806c1333,1336
+<             ILOOP { pleft[vv][NG+k-kstart] = pencil[vv][NG+k-kstart]; }
+<             for (l=0; l<3; l++) {
+<               pleft[U1+l][NG+k-kstart] = 0.0;
+<               for (m=0; m<3; m++) {
+---
+>             ILOOP { pleft[vv][NG+ktemp-k] = pencil[vv][NG+ktemp-k]; }
+>             for (int l=0; l<3; l++) {
+>               pleft[U1+l][NG+ktemp-k] = 0.0;
+>               for (int m=0; m<3; m++) {
+1808c1338
+<                 pleft[U1+l][NG+k-kstart] += lam[m][l]*v[m]/ND_ELEM_LINEAR(geom,i,j,k).scale[3][l];
+---
+>                 pleft[U1+l][NG+ktemp-k] += lam[m][l]*v[m]/ND_ELEM_LINEAR(geom,i,j,ktemp).scale[3][l];
+1811a1342
+> 	    if(ktemp>=KS(i,j,istop[2])+NG-1){continue;}
+1813c1344
+<             ph  = startx[2] + (k+1.0)*DKS(i,j)*dx[2];
+---
+>             ph  = startx[2] + (ktemp+1.0)*DKS(i,j)*dx[2];
+1830,1833c1361,1364
+<             ILOOP { pright[vv][NG+k-kstart] = pencil[vv][NG+k-kstart]; }
+<             for (l=0; l<3; l++) {
+<               pright[U1+l][NG+k-kstart] = 0.0;
+<               for (m=0; m<3; m++) {
+---
+>             ILOOP { pright[vv][NG+ktemp-k] = pencil[vv][NG+ktemp-k]; }
+>             for (int l=0; l<3; l++) {
+>               pright[U1+l][NG+ktemp-k] = 0.0;
+>               for (int m=0; m<3; m++) {
+1835c1366
+<                 pright[U1+l][NG+k-kstart] += lam[m][l]*v[m]/ND_ELEM_LINEAR(geom,i,j,k+1).scale[3][l];
+---
+>                 pright[U1+l][NG+ktemp-k] += lam[m][l]*v[m]/ND_ELEM_LINEAR(geom,i,j,ktemp+1).scale[3][l];
+1840,1842d1370
+< #endif
+< 
+<         #if (DO_RADIATION)
+1845,1873c1373,1376
+<         for (k=kstart; k<=kstop; k++) {
+<           ILOOP {
+<             pl[vv] = pright[vv][NG+k-kstart-1];
+<             pr[vv] = pleft [vv][NG+k-kstart];
+<           }
+< 
+<           if (transverse_shock(i,j,k,2)) {
+<             riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, ND_ELEM_LINEAR_F(sim_fdir2,2,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k));
+<           } else {
+<             riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, ND_ELEM_LINEAR_F(sim_fdir2,2,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k));
+<           }
+< 
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,DKS(i,j)*dx[2]/fabs(ss));
+< 
+<           #if (DO_RADIATION)
+<           // get the opacity of zone k-1
+<           opac_emis(NDP_ELEM_LINEAR(p,i,j,k-1,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k-1,TEMP), NDP_ELEM_LINEAR(p,i,j,k-1,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<           GLOOP { chil[g] =  kappa[g] + sc[g]*(1.0 - delta[g]/3.0); }
+<           // get the opacity of zone i
+<           opac_emis(NDP_ELEM_LINEAR(p,i,j,k,RHO), NDP_ELEM_LINEAR(sim_eos,i,j,k,TEMP), NDP_ELEM_LINEAR(p,i,j,k,YE), kappa, NULL, sc, delta, NULL, NULL, NULL);
+<           GLOOP {
+<             chir[g] = kappa[g] + sc[g]*(1.0 - delta[g]/3.0);
+<             chil[g] *= 0.5;
+<             chil[g] += 0.5*chir[g];
+<           }
+< 
+<           // get the fluxes of radiation variables at this interface
+<           rad_fluxes(pl, pr, ND_ELEM_LINEAR_F(sim_fdir2,2,i,j,k), 2, chil, ND_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k)[2], &ND_ELEM_LINEAR(geom,i,j,k), &ss, DJS(i));
+---
+>         ILOOP {
+>           pl[vv] = pright[vv][NG-1];
+>           pr[vv] = pleft [vv][NG+0];
+>         }
+1875,1876c1378,1388
+<           // copy chir into chil for the next interface
+<           //memcpy(chil, chir, ngroups*sizeof(double));
+---
+>         if (transverse_shock(ijk_to_I,sim_shock_flag,dj,dk,i,j,k,2)) {
+>           //riemann_flux_HLLE(pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, ND_ELEM_LINEAR_F(sim_fdir2,2,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k));
+>           riemann_flux_HLLE(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, flux, &ss, vriemann);
+>           HLOOP{NDP_ELEM_LINEAR_F(sim_fdir2,2,i,j,k,vv) = flux[vv];}
+>           SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k,dd) = vriemann[dd];}
+>         } else {
+>           //riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, ND_ELEM_LINEAR_F(sim_fdir2,2,i,j,k), &ss, ND_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k));
+>           isshock = riemann_flux_HLLC(nhydro,nvars,pl, pr, &ND_ELEM_LINEAR(geom,i,j,k), 2, flux, &ss, vriemann);
+>           HLOOP{NDP_ELEM_LINEAR_F(sim_fdir2,2,i,j,k,vv) = flux[vv];}
+>           SLOOP{NDP_ELEM_LINEAR_F(sim_vedgedir2,2,i,j,k,dd) = vriemann[dd];}
+>         }
+1878,1884c1390,1394
+<           // update estimate for next time step, if necessary
+<           min_dt = MIN(min_dt,DKS(i,j)*dx[2]/fabs(ss));
+<           #endif
+<         } // k-loop
+<       } // j-loop
+<     } // i-loop
+<   } // OpenMP parallel region
+---
+>         // update estimate for next time step, if necessary
+>         min_dt = MIN(min_dt,DKS(i,j)*dx[2]/fabs(ss));
+>     }
+>   }
+>           
+1889c1399
+< 	return;
+---
+>   return;

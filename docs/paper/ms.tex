@@ -1,0 +1,136 @@
+\documentclass[iop]{emulateapj}
+
+%\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+
+\begin{document}
+
+\title{Fornax: a Flexible Code for Multiphysics Astrophysical Simulations}
+
+\author{Joshua C. Dolence\altaffilmark{1}}
+\author{Adam Burrows\altaffilmark{2}}
+\author{M. Aaron Skinner\altaffilmark{2}}
+
+\altaffiltext{1}{Computational Physics and Methods, Los Alamos National Laboratory, jdolence@lanl.gov}
+\altaffiltext{2}{Department of Astrophysical Sciences, Princeton University}
+
+\begin{abstract}
+The abstract.
+\end{abstract}
+
+\keywords{methods: numerical}
+
+\section{Introduction}
+In recent years, there has been an explosion of techniques and codes to solve the equations of radiation hydrodynamics in astrophysical environments [REFS].  
+
+\section{Formulation of the Equations}
+\label{sec:formulation}
+In Fornax, we have decided to make use of a metric tensor to formulate our equations in a way that makes no reference to any particular geometry or set of coordinates.  Perhaps the biggest advantage of this approach is flexibility; as we discuss below, switching geometries and coordinates in Fornax is straightforward, quick, and much less error prone than in codes that explicitly express these choices in the equations to be solved.
+
+\subsection{Hydrodynamics}
+As is standard practice, we denote contravariant components of a vector with raised indices, covariant components with lowered indices, covariant differentiation with a semicolon, partial differentiation with a comma, and make use of Einstein notation for summation over repeated indices.  Here, and throughout this work, we adopt a coordinate basis.  In this notation, the equations of hydrodynamics can be written
+\begin{align}
+\rho_{,t} + (\rho v^i)_{;i}  &= 0 \label{eq:hydro_cont_start} \\ 
+(\rho v_j)_{,t} + (\rho v^i v_j + P \delta^i_{\;j})_{;i} &= S_j \\
+\left(\rho e\right)_{,t} + \left[\rho v^i \left(e + \frac{P}{\rho}\right)\right]_{;i} &= S_E \\
+(\rho X)_{,t} + (\rho X v^i)_{;i}  &= S_X\,, \label{eq:hydro_cont_stop}
+\end{align}
+where $e$ is the specific total energy of the gas, $X$ is a an arbitrary scalar that may represent, for example, composition, and $S_j$, $S_E$, and $S_X$ are source terms that account for additional physics.  The contravariant components of the velocity are $v^i = dx^i/dt$, i.e. they are coordinate velocities.  In a coordinate basis, the covariant derivatives can be expanded yielding
+\begin{align}
+\rho_{,t} + \frac{1}{\sqrt{g}}(\sqrt{g} \rho v^i)_{,i}  &= 0 \\
+(\rho v_j)_{,t} + \frac{1}{\sqrt{g}}\left[\sqrt{g} (\rho v^i v_j + P \delta^i_{\;j})\right]_{,i} &= \Gamma^l_{\;jk} T^k_{\;l} + S_j \label{eq:gas_mom}\\
+\left(\rho e\right)_{,t} + \frac{1}{\sqrt{g}}\left[\sqrt{g} \rho v^i \left(e + \frac{P}{\rho}\right)\right]_{,i} &= S_E \\
+(\rho X)_{,t} + \frac{1}{\sqrt{g}}(\sqrt{g} \rho X v^i)_{,i}  &= S_X\,, \label{eq:gas_comp}
+\end{align}
+where $g$ is the determinant of the metric, $\Gamma^l_{\;jk}$ are the Christoffel symbols, defined in terms of derivatives of the metric, and $T^k_{\;l}=\rho v^i v_j + \delta^i_{\;j} P$ is the fluid stress tensor.
+
+Note that we have chosen to express the momentum equation as a conservation law for the covariant compenents of the momentum.  There is good reason to do so.  Written this way, the geometric source terms, $\Gamma^l_{\;jk} T^k_{\;l}$, vanish identically for components associated with ignorable coordinates in the metric.  A good example is in spherical ($r$, $\theta$, $\phi$) coordinates where, since $\phi$ does not explicitly enter into the metric, the geometric source terms vanish for the $\rho v_\phi$ equation.  Physically, $\rho v_\phi$ is the angular momentum, so we are left with an explicit expression of angular momentum conservation that the numerics will satisfy to machine precision, rather than to the level of truncation error.  In general, the covariant expression of the momentum equation respects the geometry of the problem without special consideration or coordinate specific modifications of the code.
+
+\subsection{Radiation}
+Fornax evolves the zeroth and first moments of the frequency-dependent radiation transport equation.  Keeping all terms to $\mathcal{O}(v/c)$ and dropping terms proportional to the fluid acceleration, the evolution equations can be written
+\begin{align}
+E_{\varepsilon,t} + (F_{\varepsilon}^i + v^i E_{\varepsilon})_{;i} - v^i_{;j}\frac{\partial P_{\varepsilon i}^j}{\partial\ln\varepsilon} &= R_{\varepsilon E} \label{eq:rad_E} \\ 
+F_{\varepsilon j,t} + (c^2 P_{\varepsilon j}^i + v^i F_{\varepsilon j})_{;i} + v^i_{;j} F_{\varepsilon i}  - v^i_{;k} \frac{\partial \varepsilon Q^k_{\varepsilon ji}}{\partial\varepsilon}  &= R_{\varepsilon j}\,.
+\end{align}
+Here, $E_{\varepsilon}$ and $F_{\varepsilon j}$ are the monochromatic energy density and flux of the radiation field at energy $\varepsilon$ in the comoving frame, $P^j_{\varepsilon i}$ is the radiation pressure tensor ($2^{\rm nd}$ moment), $Q^k_{\varepsilon j i}$ is the heat-flux tensor ($3^{\rm rd}$ moment), and $R_{\varepsilon E}$ and $R_{\varepsilon j}$ are the collision terms that account for interactions between the radiation and matter.  The interaction terms are written
+\begin{align}
+R_{\varepsilon E} &= j_\varepsilon - c \kappa_\varepsilon E_\varepsilon \\
+R_{\varepsilon j} &= -c(\kappa_\varepsilon + \sigma^{\rm tr}_\varepsilon) F_{\varepsilon j}\,, \label{eq:rad_mom_src}
+\end{align}
+where $j_\varepsilon$ is the emissivity, $\kappa_\varepsilon$ is the absorption coefficient, and $\sigma^{\rm tr}_\varepsilon$ is the scattering coefficient.  Correspondingly, there are energy and momentum source terms in the fluid equations:
+\begin{align}
+S^{\rm{rad}}_j &= -\frac{1}{c^2} \int_0^\infty R_{\varepsilon j} d\varepsilon \label{eq:radgas_E} \\ 
+S^{\rm{rad}}_E &= -\int_0^\infty (R_{\varepsilon E} + \frac{v^i}{c^2} R_{\varepsilon i}) d\varepsilon\,. \label{eq:radgas_mom}
+\end{align}
+As in the fluid sector, we rewrite these covariant derivatives as partial derivative, introducing geometric source terms in the (radiation) momentum equation.
+
+Fornax can treat either photon or neutrino radiation fields.  For neutrinos, Eqs.~\ref{eq:rad_E}--\ref{eq:rad_mom_src} are solved separately for each species and Eqs.~\ref{eq:radgas_E} \& \ref{eq:radgas_mom} are summed over species.  Additionlly, the electron fraction is evolved according to Eq.~\ref{eq:gas_comp}, with $X=Y_e$ and
+\begin{equation}
+S_X = \sum_s \int_0^\infty \xi_{s\varepsilon} (j_{s\varepsilon} - c \kappa_{s\varepsilon} E_{s\varepsilon}) d\varepsilon \,,
+\end{equation}
+where $s$ refers to the neutrino species and
+\begin{equation}
+\xi_{s\varepsilon} = \begin{cases}
+	-(N_A \varepsilon)^{-1}&	\text{$s=\nu_e$},\\
+	(N_A \varepsilon)^{-1}&		\text{$s=\bar{\nu}_e$},\\
+	0&							\text{$s=\nu_x$},
+	\end{cases}\,.
+\end{equation}
+
+
+\subsection{Self-gravity}
+Motivated by our first applications, we have limited our implementation of self-gravity to spherical geometries.  In such cases (core-collapse supernova models, for example), we use a multipole expansion of the gravitional potential, centered on the origin of the coordinate system.  More text (Aaron?).
+
+\subsection{Reactions}
+Should we include this?
+
+\section{Numerical Discretization}
+We adopt a finite volume discretization of the equations presented in Sec.~\ref{sec:formulation}.  Independent of geometry or coordinates, the volume element can always be expressed $dV=\sqrt{g} d^3x$, for arbitrary coordinates $x$.  Similarly, the area element is $dA=\sqrt{g} d^2x$.  Integrating the equations over control volumes (cells) and diving by these same volumes leads to a set of exact equations describing the evolution of cell-volume averaged quantities.
+
+Applying the divergence theorem, we express the divergence terms in each equation as a net flux through the faces.  For example, the density in cell $(i,j,k)$ evolves according to
+\begin{equation}
+\begin{split}
+\frac{d \rho_{i,j,k}}{dt} = -\frac{1}{V_{i,j,k}} (&(\rho v^0 A_0)_{i+1/2,j,k} - (\rho v^0 A_0)_{i-1/2,j,k} \\ + &(\rho v^1 A_1)_{i,j+1/2,k} - (\rho v^1  A_1)_{i,j-1/2,k} \\ + &(\rho v^2 A_2)_{i,j,k+1/2} - (\rho v^2 A_2)_{i,j,k-1/2})\,.
+\end{split}
+\end{equation}
+Two things are of note.  First, by integrating over cell volumes, we have transformed our set of partial differential equations into a large set of coupled ordinary differential equations.  This will be important when we consider how to evolve the system.  Second, applying the divergence theorem as above is still exact, so long as the fluxes on each face are appropriately face averaged.
+
+Source terms appear in nearly all the evolution equations and, for consistency, must also be volume averaged.  If these source terms were linear in the conserved variables, this volume averaging would be trivial.  Unfortunately, all the source terms are nonlinear, which requires that we make choices for how the volume averaging is carried out.  For example, the geometric source terms in Eq.~\ref{eq:gas_mom} are typically treated as
+\begin{equation}
+\frac{1}{V} \int \sqrt{g} \Gamma^l_{\;jk} T^k_l d^3x \approx \langle \Gamma^l_{\;jk} T^k_l(\langle\mathbf{U}\rangle)
+\end{equation}
+where angle brackets indicate a volume average and $T^k_l(\mathbf{U})$ is stress tensor computed from the vector of volume-averaged conserved variables.  It is straightforward to show that the error in this approximation is $\mathcal{O}(\Delta x^2)$, but this is not a unique second order accurate expression.  In Appendix~\ref{app:conn}, we show how adopting alternative expressions for some geometric source terms can have desirable properties like exact conservation of angular momentum. [JCD: other source terms?]
+
+With space fully discretized, we now turn to the issue of evolution.  Our equations can all be written
+\begin{equation}
+\frac{\partial Q}{\partial t} + (F^i_Q)_{;i} = S_{\rm non-stiff} + S_{\rm stiff}
+\end{equation}
+where $Q$ is some quantity evolved on the mesh, $F^i_Q$ is the flux of that quantity, and the source terms have been grouped together according to whether they are stiff.  The only terms currently treated by Fornax that are stiff are the collision terms that couple radiation and matter [JCD: and reactions?].  These stiff terms require an implicit treatment for numerical stability since Fornax (sensibly) only controls the time step with signal speeds and accuracy considerations based on relative changes in variables over time steps.  All other terms are treated explicitly and evolved together without operator splitting.  The explicit integration is currently carried out using Shu \& Osher's optimal second order Runge-Kutta scheme [REF].  [JCD: describe imex step]
+
+\section{Methods \& Algorithms}
+\subsection{Hydrodynamics}
+The hydrodynamics in Fornax is a directionally unsplit, higher-order, Godunov-type scheme.  Having already described the underlying discrete representation of the variables as well as the time-stepping scheme, the essential remaining element is a scheme for computing fluxes on cell faces.  Since Fornax employs Runge-Kutta time-stepping, there is no need for any characteristic tracing step or transverse flux gradient corrections as are required in single-step unsplit schemes [REF].  This approach has the great advantage of relative simplicity, especially in the multi-physics context.  Fornax follows the standard approach used by similar codes [REFS], first reconstructing the state on faces and then solving the resulting Riemann problem to compute fluxes.
+
+\subsubsection{Reconstruction}
+There are many approaches to reconstructing face data based on cell values.  One particularly popular approach is to reconstruct the primitive variables ($\rho$, $P$, and $v^i$) using the method described by [REF], the so-called piecewise parabolic method (PPM).  PPM is based on the idea of reconstructing profiles of volume averaged data, incorporating curvilinear coordinates by defining profiles in a volume coordinate rather than the coordinates themselves.  However, as [REF] point out, this approach can be problematic in the vicinity of coordinate singularities.  [REF] further suggest a generalized approach to PPM in cyclindrical and spherical coordinates.  Unfortunately, it can be shown straightforwardly that their approach cannot be used generically and, in fact, fails even for standard spherical coordinates.  Here, we present an alternative approach that works in arbitrary geometries and coordinates, and contains PPM as a special case.
+
+We begin by writing down an expression for a general $n^{\rm th}$ order polynomial:
+\begin{equation}
+p(x) = \sum_{j=0}^n c_j x^j
+\end{equation}
+where $c_j$ are the unspecified coefficients of the $j^{\rm th}$ order monomial.  Like PPM, we wish to construct a polynomial $p(x)$ consistent with a value of $p_i$ in cell $i$, assumed to be the volume average of quantity $p$.  In our formulation, the volume average of $p(x)$ then must satisfy
+\begin{align}
+p_i &= \langle p \rangle \\
+    &= \frac{1}{V} \int_{x_i-1/2\Delta x}^{x_i+1/2\Delta x} p(x) \sqrt{g} dx \\
+    &= \sum_{j=0}^n c_j \langle x^j \rangle_i\;.
+\end{align}
+For $n=0$, this immediately yields the trivial result that $p(x)=p_i$, piecewise constant reconstruction in each cell.  For $n>0$, we have yet to fully constrain the reconstruction.  To proceed, we distinguish between cases where $n$ is even or $n$ is odd.  For $n$ odd, we form a symmetric stencil around each edge with $n+1$ cells and require that $p(x)$ reproduce the volume average of $p$ in each cell.  This yields continuous data at cell interfaces.  On a second pass, this continuity can be broken in a slope-limiting step that ensures no new extrema are introduced.  For $n$ even, we similarly constrain the polynomial by requiring it reproduce the volume averages of $p$ in a symmetric stencil, this time centered on a given cell.  This approach yields discontinuous data at cell interfaces.  Of course, these reconstructions must also be appropriately limited to avoid introducing new extrema.
+
+In Fornax, we most often employ the parabolic ($n=2$) case, so we describe it in more detail.  The reconstruction of$p$ in zone $i$ depends on $p$ in zones $i-1$, $i$, and $i+1$.  First, we note that this stencil is no larger than for a linear reconstruction, is similarly costly, and produces far superior results for many problems, as we show below.
+
+\subsubsection{Riemann Problems}
+Though easy to extend, Fornax currently implements three choices for computing fluxes as a function of the reconstructed left and right states.  In order of increasing sophistication, these solvers include the local Lax-Friedrichs, HLLE, and HLLC solvers.  The HLLC solver, incorporating the most complete information on the modal structure of the equations, is the least diffusive and the default choice.  Unfortunately, so-called three-wave solvers are susceptible to the carbuncle or odd-even instability.  Many schemes have been proposed to inhibit the development of this numerical instability.  In Fornax, we tag interfaces determined to be within shocks (by the pressure jump across the interface), and switch to the HLLE solver in orthogonal directions for cells adjacent to the tagged interface.  In all our tests, this very simple approach has been successful at preventing the instability, incurs essentially no cost, and is typically used so sparingly that the additional diffusion introduced into the solution is likely negligible.
+
+\subsection{Radiation}
+\end{document}

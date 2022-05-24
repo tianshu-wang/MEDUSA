@@ -1,0 +1,31 @@
+
+# use opac_null.c
+
+tmax = 0.5 
+dt_dump = 0.01
+
+cfl = 0.8;
+
+n1  = 128
+n2  = 1
+n3  = 1
+
+#initial_dt = 7.8e-5
+freq_type = hz
+nr1 = 12
+emin1 = 1.e11
+emax1 = 2.e11
+nr2 = 0
+nr3 = 0
+
+du_tol = 1.e-2
+implicit_err_tol = 1.e-12
+
+#chat = 1.e10
+use_chat = 0
+
+num_comp = 1
+
+hydro_interp_order = 3
+rad_interp_order = 2
+
