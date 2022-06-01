@@ -5,7 +5,7 @@
 USE_MPI=TRUE
 USE_OMP=TRUE
 #USE_OMP=FALSE
-USE_GPU = FALSE
+USE_GPU = TRUE
 
 CC       = mpicc
 F90      = mpif90
