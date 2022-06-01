@@ -1159,7 +1159,8 @@ void prim_to_fluxes3(double NDP_PTR p)
   GPU_PRAGMA(omp target teams distribute parallel for shared(ijk_to_I,I_to_ijk,sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1,sim_fdir2,sim_vedgedir2) reduction(min:min_dt))
   for(int II=0;II<cell_count_all;II++){
     double pl[NSIZE],pr[NSIZE],pp[NSIZE];
-    double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
+    double alpha[2*NG],beta[2*NG],Gamma[2*NG],x[2*NG];
+    //double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
     double flux[NSIZE],vriemann[NSIZE];
     double pencil[NSIZE][2*NG];
     double pleft [NSIZE][2*NG];
@@ -1205,6 +1206,17 @@ void prim_to_fluxes3(double NDP_PTR p)
         // update estimate for next time step, if necessary
         min_dt = MIN(min_dt,dx[0]/fabs(ss));
     }
+  //}
+  //GPU_PRAGMA(omp target teams distribute parallel for shared(ijk_to_I,I_to_ijk,sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1,sim_fdir2,sim_vedgedir2) reduction(min:min_dt))
+  //for(int II=0;II<cell_count_all;II++){
+  //  double pl[NSIZE],pr[NSIZE],pp[NSIZE];
+  //  double alpha[2*NG],beta[2*NG],Gamma[2*NG],x[2*NG];
+  //  //double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
+  //  double flux[NSIZE],vriemann[NSIZE];
+  //  double pencil[NSIZE][2*NG];
+  //  double pleft [NSIZE][2*NG];
+  //  double pright[NSIZE][2*NG];
+  //  GET_IJK_FROM_I(II,i,j,k);
     if(i<istart[0]||i>=istop[0]||j<JS(i,istart[1])||j>JS(i,istop[1])||k<KS(i,j,istart[2])||k>=KS(i,j,istop[2])){/*do nothing*/}
     else{
           jlev = 0;
@@ -1253,6 +1265,17 @@ void prim_to_fluxes3(double NDP_PTR p)
 	  }
 
     }  // end if
+  //}
+  //GPU_PRAGMA(omp target teams distribute parallel for shared(ijk_to_I,I_to_ijk,sim_fdir0,sim_vedgedir0,sim_fdir1,sim_vedgedir1,sim_fdir2,sim_vedgedir2) reduction(min:min_dt))
+  //for(int II=0;II<cell_count_all;II++){
+  //  double pl[NSIZE],pr[NSIZE],pp[NSIZE];
+  //  double alpha[2*NG],beta[2*NG],Gamma[2*NG],x[2*NG];
+  //  //double alpha[NSIZE_GRID],beta[NSIZE_GRID],Gamma[NSIZE_GRID],x[NSIZE_GRID];
+  //  double flux[NSIZE],vriemann[NSIZE];
+  //  double pencil[NSIZE][2*NG];
+  //  double pleft [NSIZE][2*NG];
+  //  double pright[NSIZE][2*NG];
+  //  GET_IJK_FROM_I(II,i,j,k);
     if(i<istart[0]||i>=istop[0]||j<JS(i,istart[1])||j>=JS(i,istop[1])||k<KS(i,j,istart[2])||k>KS(i,j,istop[2])){/*do nothing*/}
     else{
         klev = 0;

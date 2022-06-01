@@ -199,36 +199,27 @@ void monopole_gravity_start(double NDP_PTR p)
 	     //reduction(+:rhoavg[:NSIZE_GRID],pgasavg[:NSIZE_GRID],pradavg[:NSIZE_GRID],\
 	     //          uavg[:NSIZE_GRID],vavg[:NSIZE_GRID],eradavg[:NSIZE_GRID],vdF[:NSIZE_GRID])
 	     )
-    ZLOOP { //only parallel over ii, so no need to reduce the arrays. 
-    //for(int II=0;II<cell_count;II++) {
-      //GET_IJK_FROM_I(II,ii,jj,kk);
-      #if (DO_RADIATION==TRUE)
-      Etot = 0.0;
-      SLOOP { Ftot[dd] = 0.0; }
-      GLOOP {
-        Etot += NDP_ELEM_LINEAR(p,ii,jj,kk,irad1+g);
-        SLOOP { Ftot[dd] += NDP_ELEM_LINEAR(p,ii,jj,kk,ifrad1+g*NDIM+dd); }
-      }
-      Etot /= SQR(CLIGHT);
-      vdotF = geom_dot(Ftot, &NDP_ELEM_LINEAR(p,ii,jj,kk,U1), ND_ELEM_LINEAR(geom,ii,jj,kk).gcov[0])/pow(CLIGHT,4);
-      // calculate Prr for the M1 closure
-      Fmag  = sqrt(geom_dot(Ftot,Ftot,ND_ELEM_LINEAR(geom,ii,jj,kk).gcov[0]));
-      fred  = Fmag/(CLIGHT*fabs(Etot) + 1.0e-16);
-      fred  = MAX(0.0,MIN(1.0,fred));
-      chi   = (3.0 + 4.0*SQR(fred))/(5.0 + 2.0*sqrt(4.0 - 3.0*SQR(fred)));
-      Prr   = 0.5*Etot*((1.0-chi) + (3.0*chi-1.0)*SQR(Ftot[0])*ND_ELEM_LINEAR(geom,ii,jj,kk).gcov[0][0]/(SQR(Fmag) + 1.0e-16));
-      #else
+    for(int II=0;II<cell_count;II++) {
+      GET_IJK_FROM_I(II,ii,jj,kk);
+      //ZLOOP { //only parallel over ii, so no need to reduce the arrays. 
       Etot  = 0.0;
       vdotF = 0.0;
       Prr   = 0.0;
-      #endif
       vol          = ND_ELEM_LINEAR(geom,ii,jj,kk).volume;
+
+      GPU_PRAGMA(omp atomic)
       rhoavg[ii]  += vol*NDP_ELEM_LINEAR(p,ii,jj,kk,RHO);
+      GPU_PRAGMA(omp atomic)
       pgasavg[ii] += vol*NDP_ELEM_LINEAR(sim_eos,ii,jj,kk,PRESS);
+      GPU_PRAGMA(omp atomic)
       pradavg[ii] += vol*Prr;
+      GPU_PRAGMA(omp atomic)
       uavg[ii]    += vol*NDP_ELEM_LINEAR(p,ii,jj,kk,UU);
+      GPU_PRAGMA(omp atomic)
       vavg[ii]    += vol*NDP_ELEM_LINEAR(p,ii,jj,kk,U1);
+      GPU_PRAGMA(omp atomic)
       eradavg[ii] += vol*Etot;
+      GPU_PRAGMA(omp atomic)
       vdF[ii]     += vol*vdotF;
     }
   }
@@ -614,8 +605,8 @@ void get_ylm_ints(double *slm, double thmin, double thmax, double phimin, double
   // integral of Ylm sin\theta over a zone
   int i,l,m;
   double fact,smox2;
-  double plmp[LMAX1*LMAX1];
-  double plmm[LMAX1*LMAX1];
+  double plmp[MULTIPOLE_LMAX*MULTIPOLE_LMAX];
+  double plmm[MULTIPOLE_LMAX*MULTIPOLE_LMAX];
   double smphi,cmphi;
   double norm_fact,norm;
   double cmin = cos(thmin);
@@ -695,7 +686,7 @@ void get_ylm_ints(double *slm, double thmin, double thmax, double phimin, double
 
 static double *Clm;
 static double *Dlm;
-static double *ylm;
+//static double *ylm;
 // static double ND_PTR Phi;
 static int mmax, lmax;
 #if (USE_LINEAR_ALLOCATION==TRUE)
@@ -705,8 +696,8 @@ void multipole_gravity_start(double NDP_PTR p)
 #endif
 {
   static int firstc = 1;
-  static int oldstep = 0;
-  static int cnt = 0;
+  //static int oldstep = 0;
+  //static int cnt = 0;
 
   int ii,jj,kk,dd,l,m;
   double rmin,rmax,thmin,thmax,phimin,phimax;
@@ -722,7 +713,7 @@ void multipole_gravity_start(double NDP_PTR p)
 //  if (multipole_lmax == 0) return;
 
   if (firstc) {
-    ylm = malloc_rank1(   LMAX1*LMAX1, sizeof *ylm);
+    //ylm = malloc_rank1(   LMAX1*LMAX1, sizeof *ylm);
     Clm = malloc_rank1(n1*LMAX1*LMAX1, sizeof *Clm);
     Dlm = malloc_rank1(n1*LMAX1*LMAX1, sizeof *Dlm);
     // Phi = dendritic_malloc_double();
@@ -745,7 +736,13 @@ void multipole_gravity_start(double NDP_PTR p)
   lmax = mmax = multipole_lmax;
   #endif
 
-  ZLOOP {
+  //ZLOOP {
+  GPU_PRAGMA(omp target data map(tofrom:Clm[:n1*LMAX1*LMAX1],Dlm[:n1*LMAX1*LMAX1])) {
+  GPU_PRAGMA(omp target teams distribute parallel for)
+  for(int II=0;II<cell_count;II++) {
+    GET_IJK_FROM_I(II,ii,jj,kk);
+
+    double ylm[MULTIPOLE_LMAX*MULTIPOLE_LMAX];
     rmin = r_of_x(rx_info,startx[0] +  ii   *dx[0]);
     rmax = r_of_x(rx_info,startx[0] + (ii+1)*dx[0]);
     #if (NDIM>1)
@@ -773,10 +770,13 @@ void multipole_gravity_start(double NDP_PTR p)
       else if (l==2) rd = (rmin > 1.0e-16) ? log(rmax/rmin) : 0.0;
       else           rd = (rmin > 1.0e-16) ? (pow(rmin,2-l) - pow(rmax,2-l))/(l-2) : 0.0;
       for (m=-MIN(l,mmax); m<=MIN(l,mmax); m++) {
+        GPU_PRAGMA(omp atomic)	
         Clm[ILM_INDEX(ii,l,m)] += NDP_ELEM_LINEAR(p,ii,jj,kk,RHO)*ylm[LM_INDEX(l,m)]*rc;
+        GPU_PRAGMA(omp atomic)	
         Dlm[ILM_INDEX(ii,l,m)] += NDP_ELEM_LINEAR(p,ii,jj,kk,RHO)*ylm[LM_INDEX(l,m)]*rd;
       }
     }
+  }
   }
 
 #if (GR_MONOPOLE==TRUE)
@@ -805,7 +805,6 @@ void multipole_gravity_finish(double NDP_PTR p)
   double rho,vx,vy,vz,dPhi;
   double vx0,vx1,vy0,vy1,vz0,vz1;
   double dx0,dx1,dx2,dA0,dA1;
-  double wx[2],wy[2],wz[2],sgn[2];
   int iii,jjj,kkk,ip,jp,kp,njp,nkp;
   int lev,s;
 
@@ -844,6 +843,7 @@ void multipole_gravity_finish(double NDP_PTR p)
   /* Compute multipole potential Phi at zone corners */
   thm = 0.5*M_PI;
   phm = M_PI;
+  /*
   for (ii=istart[0]; ii<=istop[0]; ii++) {
     rm  = r_of_x(rx_info,startx[0]+ ii*dx[0]);
 
@@ -856,36 +856,60 @@ void multipole_gravity_finish(double NDP_PTR p)
       for (kk=KS(ii,jj,istart[2]); kk<=KS(ii,jj,istop[2]); kk++) {
         phm = startx[2] + kk*DKS(ii,jj)*dx[2];
       #endif
+  */
+  GPU_PRAGMA(omp target data map(to:Clm[:n1*LMAX1*LMAX1],Dlm[:n1*LMAX1*LMAX1])) {
+  GPU_PRAGMA(omp target teams distribute parallel for)
+  for(int II=0;II<cell_count_all;II++) {
+    GET_IJK_FROM_I(II,ii,jj,kk);
+    if(ii<istart[0]||ii>istop[0]){continue;}
+    #if (NDIM>1)
+    if(jj<JS(ii,istart[1])||jj>JS(ii,istop[1])){continue;}
+    #else
+    //if(jj<JS(ii,istart[1])||jj>=JS(ii,istop[1])){continue;}
+    if(jj!=0){continue;}
+    #endif
+    #if (NDIM==3)
+    if(kk<KS(ii,jj,istart[2])||kk>KS(ii,jj,istop[2])){continue;}
+    #else
+    //if(kk<KS(ii,jj,istart[2])||kk>=KS(ii,jj,istop[2])){continue;}
+    if(kk!=0){continue;}
+    #endif
+    double ylm[MULTIPOLE_LMAX*MULTIPOLE_LMAX];
 
-        get_ylms(ylm, thm, phm, lmax, mmax);
+    rm  = r_of_x(rx_info,startx[0]+ ii*dx[0]);
+    thm = th_of_x(thx_info,startx[1] + jj*DJS(ii)*dx[1]);
+    phm = startx[2] + kk*DKS(ii,jj)*dx[2];
+    get_ylms(ylm, thm, phm, lmax, mmax);
+    ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) = 0.0;
 
-        ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) = 0.0;
-
-        if (rm < 1.0e-16) {
-        } else if (ii==n1) {
-          for (l=1; l<=lmax; l++) {
-            Clfac = -4.0*M_PI*GNEWT/(2*l+1)/pow(rm,l+1);
-            for (m=-MIN(l,mmax); m<=MIN(l,mmax); m++) {
-              ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Clfac*ylm[LM_INDEX(l,m)]*Clm[ILM_INDEX(ii-1,l,m)];
-            }
-          }
-        } else {
-          for (l=1; l<=lmax; l++) {
-            Clfac = -4.0*M_PI*GNEWT/(2*l+1)/pow(rm,l+1);
-            Dlfac = -4.0*M_PI*GNEWT/(2*l+1)*pow(rm,l  );
-            for (m=-MIN(l,mmax); m<=MIN(l,mmax); m++) {
-              ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Clfac*ylm[LM_INDEX(l,m)]*Clm[ILM_INDEX(ii-1,l,m)];
-              ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Dlfac*ylm[LM_INDEX(l,m)]*Dlm[ILM_INDEX(ii  ,l,m)];
-            }
-          }
+    if (rm < 1.0e-16) {
+    } else if (ii==n1) {
+      for (l=1; l<=lmax; l++) {
+        Clfac = -4.0*M_PI*GNEWT/(2*l+1)/pow(rm,l+1);
+        for (m=-MIN(l,mmax); m<=MIN(l,mmax); m++) {
+          ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Clfac*ylm[LM_INDEX(l,m)]*Clm[ILM_INDEX(ii-1,l,m)];
         }
+      }
+    } else {
+      for (l=1; l<=lmax; l++) {
+        Clfac = -4.0*M_PI*GNEWT/(2*l+1)/pow(rm,l+1);
+        Dlfac = -4.0*M_PI*GNEWT/(2*l+1)*pow(rm,l  );
+        for (m=-MIN(l,mmax); m<=MIN(l,mmax); m++) {
+          ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Clfac*ylm[LM_INDEX(l,m)]*Clm[ILM_INDEX(ii-1,l,m)];
+          ND_ELEM_LINEAR(sim_Phi,ii,jj,kk) += Dlfac*ylm[LM_INDEX(l,m)]*Dlm[ILM_INDEX(ii  ,l,m)];
+        }
+      }
+    }
 
+    /*
       #if (NDIM==3)
       }
       #endif
     #if (NDIM>1)
     }
     #endif
+    */
+  }
   }
 
   /* Compute gravity source terms:  For the component of grad Phi in a given direction, need to loop
@@ -897,37 +921,39 @@ void multipole_gravity_finish(double NDP_PTR p)
    *   used to perform the differencing inside the loops.  Finally, <rho*v> is computed using the mass
    *   fluxes and dividing by the area, then averaging using the same weights as before.
    */
-  sgn[0] = -1.0;  sgn[1] = 1.0;
-  wy[0] = 0.5;  wy[1] = 0.5;
-  wz[0] = 0.5;  wz[1] = 0.5;
-  dx0 = 1.0;  dx1 = 1.0;  dx2 = 1.0;
 
-  ISLOOP(ii) {
-    rm  = r_of_x(rx_info,startx[0]+ ii   *dx[0]);
-    rp  = r_of_x(rx_info,startx[0]+(ii+1)*dx[0]);
-    /* Use beta/Gamma to get <x[0]> */
-    rc  = r_of_x(rx_info,beta0[ii]/Gamma0[ii]);
-    wx[0] = (rp-rc)/(rp-rm);
-    wx[1] = (rc-rm)/(rp-rm);
-    dx0 = dx[0];
-
-    /* Compute the dendritic level in jj for this ii */
+  //ISLOOP(ii) {
+  //  JSLOOP(ii,jj) {
+  //    KSLOOP(ii,jj,kk) {
+  GPU_PRAGMA(omp target teams distribute parallel for)
+  for (int II=0;II<cell_count;II++) {
+    GET_IJK_FROM_I(II,ii,jj,kk);
+        double wx[2],wy[2],wz[2],sgn[2];
+        sgn[0] = -1.0;  sgn[1] = 1.0;
+        wy[0] = 0.5;  wy[1] = 0.5;
+        wz[0] = 0.5;  wz[1] = 0.5;
+        dx0 = 1.0;  dx1 = 1.0;  dx2 = 1.0;
+        rm  = r_of_x(rx_info,startx[0]+ ii   *dx[0]);
+        rp  = r_of_x(rx_info,startx[0]+(ii+1)*dx[0]);
+        /* Use beta/Gamma to get <x[0]> */
+        rc  = r_of_x(rx_info,beta0[ii]/Gamma0[ii]);
+        wx[0] = (rp-rc)/(rp-rm);
+        wx[1] = (rc-rm)/(rp-rm);
+        dx0 = dx[0];
+        /* Compute the dendritic level in jj for this ii */
   	lev = 0;
   	s   = DJS(ii);
   	while (s >>= 1) lev++;
-
-    #if (NDIM>1)
-    JSLOOP(ii,jj) {
-      thm = th_of_x(thx_info,startx[1] +  jj   *DJS(ii)*dx[1]);
-      thp = th_of_x(thx_info,startx[1] + (jj+1)*DJS(ii)*dx[1]);
-      /* Use beta/Gamma to get <x[1]> */
-      thc = th_of_x(thx_info,beta1s[lev][jj]/Gamma1s[lev][jj]);
-      wy[0] = (thp-thc)/(thp-thm);
-      wy[1] = (thc-thm)/(thp-thm);
-      dx1 = DJS(ii)*dx[1];
-    #endif
-      #if (NDIM==3)
-      KSLOOP(ii,jj,kk) {
+        #if (NDIM>1)
+        thm = th_of_x(thx_info,startx[1] +  jj   *DJS(ii)*dx[1]);
+        thp = th_of_x(thx_info,startx[1] + (jj+1)*DJS(ii)*dx[1]);
+        /* Use beta/Gamma to get <x[1]> */
+        thc = th_of_x(thx_info,beta1s[lev][jj]/Gamma1s[lev][jj]);
+        wy[0] = (thp-thc)/(thp-thm);
+        wy[1] = (thc-thm)/(thp-thm);
+        dx1 = DJS(ii)*dx[1];
+        #endif
+        #if (NDIM==3)
         phm = startx[2] +  kk   *DKS(ii,jj)*dx[2];
         php = startx[2] + (kk+1)*DKS(ii,jj)*dx[2];
         /* <x[2]> is just the arithemetic mean in the 2-direction */
@@ -935,7 +961,7 @@ void multipole_gravity_finish(double NDP_PTR p)
         wz[0] = (php-phc)/(php-phm);
         wz[1] = (phc-phm)/(php-phm);
         dx2 = DKS(ii,jj)*dx[2];
-      #endif
+        #endif
 
         rho = NDP_ELEM_LINEAR(p,ii,jj,kk,RHO);
 
@@ -1076,12 +1102,12 @@ void multipole_gravity_finish(double NDP_PTR p)
         NDP_ELEM_LINEAR(sim_src,ii,jj,kk,ETOT) -= vz*dPhi/dx2;
         #endif
 
-      #if (NDIM==3)
-      }
-      #endif
-    #if (NDIM>1)
-    }
-    #endif
+   //   #if (NDIM==3)
+   //   }
+   //   #endif
+   // #if (NDIM>1)
+   // }
+   // #endif
   }
 
   TIMER_STOP;

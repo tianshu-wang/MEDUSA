@@ -122,6 +122,7 @@ GPU_PRAGMA(omp target teams num_teams(1))
 
   if(NSIZE<=ninterp){printf("NSIZE has to be greater than ninterp!\nNSIZE=%d, ninterp=%d.\nReset NSIZE in decs.h.\n",NSIZE,ninterp);exit(0);}
   if(NSIZE_GRID<=max_grid_dim){printf("NSIZE_GRID has to be greater than max_grid_dim!\nNSIZE=%d, max_grid_dim=%d.\nReset NSIZE_GRID in decs.h.\n",NSIZE_GRID,max_grid_dim);exit(0);}
+  if(MULTIPOLE_LMAX<=multipole_lmax+1){printf("MULTIPOLE_LMAX has to be greater than multipole_lmax+1!\nMULTIPOLE_LMAX=%d, multipole_lmax+1=%d.\nReset MULTIPOLE_LMAX in decs.h.\n",MULTIPOLE_LMAX,multipole_lmax+1);exit(0);}
 
 
 

@@ -35,6 +35,7 @@
 
 #define NSIZE 20 // must be greater than ninterp
 #define NSIZE_GRID 1280 // must be greater than max_grid_dim
+#define MULTIPOLE_LMAX 15 // must be greater than multipole_lmax+1
 
 #define FALSE	0
 #define TRUE	1

@@ -1116,7 +1116,8 @@ void eos(const double *table,int input, double *dens, double *temp, double *ye_i
     double pressure_want;
     double temp_row;
     //double cv(npoints)
-    double f[numel];
+    double f[NSIZE];
+    //double f[numel];
     double tempmev;
     //double xn(npoints)
     //double xp(npoints)
@@ -1664,7 +1665,8 @@ void bisection(const double *table,double target,int nn,double *temp,double rho,
   DEFINE_EOSCONST_2
       double ep,e,ep1,ep2,dt,depdt,dd;
       double temp1,temp2,dtemp,tmid,temp00;
-      double f[numel],f1[numel],f2[numel],fmid[numel];
+      double f[NSIZE],f1[NSIZE],f2[NSIZE],fmid[NSIZE];
+      //double f[numel],f1[numel],f2[numel],fmid[numel];
       double min_temp,max_temp,eps_temp,eps_ener;
       int i,jy,jq,jr,mcount;
 
