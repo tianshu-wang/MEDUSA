@@ -1,1 +1,0 @@
-setups/ccsn_1d.mk
