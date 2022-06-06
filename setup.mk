@@ -1,1 +1,0 @@
-setups/ccsn_3d.mk
