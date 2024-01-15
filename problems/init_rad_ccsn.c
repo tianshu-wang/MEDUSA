@@ -332,6 +332,7 @@ void init_problem()
     free(ye_model);
     free(v_model);
     free(s_model);
+    free(rad_model);
     free(lapse_model);
     free(lapse_edge_model);
 
